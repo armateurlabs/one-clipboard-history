@@ -16,6 +16,12 @@ Unicode/tabulations/CRLF, la persistance et ses corruptions, les limites par
 entrée entière, les réglages, le clavier de la palette, le placement, les
 apparences, les traductions et les événements de lancement silencieux.
 
+La [CI GitHub macOS 27 / Apple Silicon](https://github.com/armateurlabs/one-clipboard-history/actions/runs/41824814530)
+a également réussi : tests, compilation release, validation du bundle, archive
+Store sandboxée et conservation des artefacts ZIP. Le code exécuté est celui de
+`c38f1fe` ; le correctif de publication suivant réencode seulement les captures
+en PNG et complète ce relevé.
+
 Les ajouts de cette version vérifient notamment :
 
 - Compatibilité des anciennes sauvegardes sans bookmarks, métadonnées d’accès
@@ -114,6 +120,24 @@ Après fermeture des fenêtres d’information, un relevé ponctuel de l’appli
 installée donne **0,0 % CPU** et **126 960 Kio RSS** (environ 124 Mio), après
 43 secondes d’exécution. Ce point de mesure au repos n’est ni une moyenne ni
 une limite de consommation, et ne caractérise pas le traitement d’images lourdes.
+
+## Livraison GitHub
+
+Les sources et leur historique sont publiés sur la branche `main` du
+[dépôt public](https://github.com/armateurlabs/one-clipboard-history).
+Les trois captures sont de véritables fichiers PNG, issus de l’application
+d’aperçu avec données synthétiques.
+
+Le ZIP `one-clipboard-history-0.7.0-macos-arm64.zip` contient le bundle direct
+arm64, sa licence, ses traductions et sa politique de confidentialité. Une
+extraction neuve a été validée avec `scripts/validate-app.sh`. Il utilise une
+signature ad hoc, sans notarisation, et est livré comme préversion de validation.
+
+SHA-256 du ZIP :
+
+```text
+10dc8e7234db2ac3031b6818e2fa358ea7564f01e5aa86e5d59ea7ac13d992f2
+```
 
 ## Préalables et recette restante
 
