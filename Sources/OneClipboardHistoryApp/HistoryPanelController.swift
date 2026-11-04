@@ -21,8 +21,8 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     private var showPreviews = true
     private var showSizes = true
     private var fontSize: CGFloat = 12
-    private var compactView = true
-    private var rowLayout = HistoryRowLayout(fontSize: 12, compact: true)
+    private var density: HistoryDensity = .compact
+    private var rowLayout = HistoryRowLayout(fontSize: 12, density: .compact)
     private var rowHeight: CGFloat { rowLayout.height }
     private var positioningWindow = false
     private var didPositionWindow = false
@@ -66,17 +66,17 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     required init?(coder: NSCoder) { nil }
 
     func update(rows newRows: [HistoryRow], showPreviews: Bool, showSizes: Bool, status: String?,
-                fontSize: Double = 12, animationsEnabled: Bool = false, compactView: Bool = true) {
+                fontSize: Double = 12, animationsEnabled: Bool = false, density: HistoryDensity = .compact) {
         let previousIndex = table.selectedRow
         let previousID = rows.indices.contains(previousIndex) ? rows[previousIndex].entry.id : nil
         rows = newRows
         self.showPreviews = showPreviews
         self.showSizes = showSizes
         let normalizedFontSize = Self.validFontSize(fontSize)
-        if self.fontSize != normalizedFontSize || self.compactView != compactView {
+        if self.fontSize != normalizedFontSize || self.density != density {
             self.fontSize = normalizedFontSize
-            self.compactView = compactView
-            rowLayout = HistoryRowLayout(fontSize: normalizedFontSize, compact: compactView)
+            self.density = density
+            rowLayout = HistoryRowLayout(fontSize: normalizedFontSize, density: density)
         }
         table.rowHeight = rowHeight
         historyPanel.animationBehavior = animationsEnabled ? .utilityWindow : .none
@@ -401,22 +401,34 @@ private struct HistoryRowLayout {
     static let textSpacing: CGFloat = 2
     let height: CGFloat
     let previewSide: CGFloat
-    let numberInset: CGFloat
+    let numberHeight: CGFloat
+    let isCompact: Bool
 
-    init(fontSize: CGFloat, compact: Bool) {
+    init(fontSize: CGFloat, density: HistoryDensity) {
         // Measure native single-line controls once per font/layout change, never
-        // per history entry. The same fonts and preview size serve both layouts.
+        // per history entry. Density never changes the user's font size.
         let title = NSTextField(labelWithString: "Ag")
         title.font = .systemFont(ofSize: fontSize)
         title.usesSingleLineMode = true
         let metadata = NSTextField(labelWithString: "Ag")
         metadata.font = .systemFont(ofSize: max(10, fontSize - 2))
         metadata.usesSingleLineMode = true
-        previewSide = min(48, max(40, ceil(fontSize * 1.6)))
-        let textHeight = title.intrinsicContentSize.height + metadata.intrinsicContentSize.height + Self.textSpacing
+        let titleHeight = ceil(title.intrinsicContentSize.height)
+        isCompact = density == .compact
+        previewSide = isCompact ? 0 : min(48, max(40, ceil(fontSize * 1.6)))
+        let textHeight = titleHeight + metadata.intrinsicContentSize.height + Self.textSpacing
         let fittedHeight = ceil(max(textHeight, previewSide) + 4)
-        height = compact ? fittedHeight : max(max(56, ceil(fontSize * 2 + 22)), fittedHeight)
-        numberInset = compact ? 4 : 10
+        switch density {
+        case .compact:
+            height = titleHeight + 4
+            numberHeight = titleHeight
+        case .normal:
+            height = fittedHeight
+            numberHeight = fittedHeight - 4
+        case .large:
+            height = max(max(56, ceil(fontSize * 2 + 22)), fittedHeight)
+            numberHeight = height - 10
+        }
     }
 }
 
@@ -427,10 +439,16 @@ private final class HistoryCellView: NSTableCellView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(labelWithString: "")
     private let sizeLabel = NSTextField(labelWithString: "")
+    private let titleLine = NSStackView()
+    private let metadata = NSStackView()
+    private let labels = NSStackView()
+    private var usesCompactLayout = false
     private var numberWidth: NSLayoutConstraint!
     private var numberHeight: NSLayoutConstraint!
     private var previewWidth: NSLayoutConstraint!
     private var previewHeight: NSLayoutConstraint!
+    private var labelsWithPreview: NSLayoutConstraint!
+    private var labelsWithoutPreview: NSLayoutConstraint!
 
     override var backgroundStyle: NSView.BackgroundStyle {
         didSet {
@@ -445,6 +463,7 @@ private final class HistoryCellView: NSTableCellView {
     init() {
         super.init(frame: .zero)
         numberPill.translatesAutoresizingMaskIntoConstraints = false
+        numberPill.identifier = NSUserInterfaceItemIdentifier("historyRank")
         preview.translatesAutoresizingMaskIntoConstraints = false
         preview.imageScaling = .scaleProportionallyUpOrDown
         preview.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -462,14 +481,21 @@ private final class HistoryCellView: NSTableCellView {
         sizeLabel.lineBreakMode = .byTruncatingTail
         sizeLabel.usesSingleLineMode = true
         sizeLabel.setContentHuggingPriority(.required, for: .horizontal)
-        let metadata = NSStackView(views: [detailLabel, sizeLabel])
+        metadata.addArrangedSubview(detailLabel)
+        metadata.addArrangedSubview(sizeLabel)
         metadata.orientation = .horizontal
         metadata.alignment = .firstBaseline
         metadata.spacing = 8
-        let labels = NSStackView(views: [titleLabel, metadata])
+        titleLine.addArrangedSubview(titleLabel)
+        titleLine.orientation = .horizontal
+        titleLine.alignment = .firstBaseline
+        titleLine.spacing = 8
+        labels.addArrangedSubview(titleLine)
+        labels.addArrangedSubview(metadata)
         labels.orientation = .vertical
         labels.alignment = .leading
         labels.spacing = HistoryRowLayout.textSpacing
+        labels.detachesHiddenViews = true
         labels.translatesAutoresizingMaskIntoConstraints = false
         addSubview(numberPill)
         addSubview(preview)
@@ -479,6 +505,8 @@ private final class HistoryCellView: NSTableCellView {
         numberHeight = numberPill.heightAnchor.constraint(equalToConstant: 46)
         previewWidth = preview.widthAnchor.constraint(equalToConstant: 40)
         previewHeight = preview.heightAnchor.constraint(equalToConstant: 40)
+        labelsWithPreview = labels.leadingAnchor.constraint(equalTo: preview.trailingAnchor, constant: 12)
+        labelsWithoutPreview = labels.leadingAnchor.constraint(equalTo: numberPill.trailingAnchor, constant: 8)
         NSLayoutConstraint.activate([
             numberPill.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             numberPill.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -488,10 +516,10 @@ private final class HistoryCellView: NSTableCellView {
             preview.centerYAnchor.constraint(equalTo: centerYAnchor),
             previewWidth,
             previewHeight,
-            labels.leadingAnchor.constraint(equalTo: preview.trailingAnchor, constant: 12),
+            labelsWithPreview,
             labels.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             labels.centerYAnchor.constraint(equalTo: centerYAnchor),
-            titleLabel.widthAnchor.constraint(equalTo: labels.widthAnchor),
+            titleLine.widthAnchor.constraint(equalTo: labels.widthAnchor),
             metadata.widthAnchor.constraint(equalTo: labels.widthAnchor)
         ])
     }
@@ -502,10 +530,24 @@ private final class HistoryCellView: NSTableCellView {
                    fontSize: CGFloat, layout: HistoryRowLayout) {
         numberPill.number = rank
         numberPill.fontSize = fontSize
-        numberWidth.constant = max(32, ceil(fontSize * 2))
-        numberHeight.constant = layout.height - layout.numberInset
+        let rankWidth = (String(rank) as NSString).size(withAttributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .regular)
+        ]).width
+        numberWidth.constant = layout.isCompact ? max(layout.numberHeight, ceil(rankWidth + 4)) : max(32, ceil(fontSize * 2))
+        numberHeight.constant = layout.numberHeight
         previewWidth.constant = layout.previewSide
         previewHeight.constant = layout.previewSide
+        if usesCompactLayout != layout.isCompact {
+            let previous = usesCompactLayout ? titleLine : metadata
+            previous.removeArrangedSubview(sizeLabel)
+            sizeLabel.removeFromSuperview()
+            (layout.isCompact ? titleLine : metadata).addArrangedSubview(sizeLabel)
+            usesCompactLayout = layout.isCompact
+        }
+        NSLayoutConstraint.deactivate([labelsWithPreview, labelsWithoutPreview])
+        (layout.isCompact ? labelsWithoutPreview : labelsWithPreview).isActive = true
+        metadata.isHidden = layout.isCompact
+        preview.isHidden = layout.isCompact
         titleLabel.font = .systemFont(ofSize: fontSize)
         detailLabel.font = .systemFont(ofSize: max(10, fontSize - 2))
         sizeLabel.font = detailLabel.font
@@ -523,7 +565,9 @@ private final class HistoryCellView: NSTableCellView {
             : ByteCountFormatStyle(style: .file, spellsOutZero: false, locale: L10n.currentLocale).format(row.presentation.displayByteCount)
         sizeLabel.isHidden = !showSize
         toolTip = "\(row.presentation.title)\n\(detailLabel.stringValue)\(showSize ? " · " + sizeLabel.stringValue : "")"
-        if showPreview, let data = row.presentation.thumbnailData, let image = NSImage(data: data) {
+        if layout.isCompact {
+            preview.image = nil
+        } else if showPreview, let data = row.presentation.thumbnailData, let image = NSImage(data: data) {
             preview.image = image
             preview.contentTintColor = nil
         } else {
@@ -550,7 +594,8 @@ private final class NumberPillView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let fill = emphasized ? NSColor.white.withAlphaComponent(0.14) : NSColor.quaternaryLabelColor
         fill.setFill()
-        NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill()
+        let radius = min(8, bounds.height / 4)
+        NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius).fill()
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .regular),
             .foregroundColor: emphasized ? NSColor.alternateSelectedControlTextColor : NSColor.labelColor

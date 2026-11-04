@@ -4,9 +4,9 @@ Un historique du presse-papiers natif pour **macOS 27 sur Apple Silicon**, écri
 
 [English](README.en.md) · [Téléchargements](https://github.com/armateurlabs/one-clipboard-history/releases) · [Licence MIT](LICENSE) · [Confidentialité](PRIVACY.md)
 
-| Apparence claire | Apparence sombre |
+| Mode normal, clair | Mode normal, sombre |
 | --- | --- |
-| ![Historique compact en apparence claire, avec texte, code, image et fichiers de démonstration](docs/screenshots/history-light.png) | ![Le même historique en apparence sombre native](docs/screenshots/history-dark.png) |
+| ![Historique normal en apparence claire, avec texte, code, image et fichiers de démonstration](docs/screenshots/history-light.png) | ![Le même historique en apparence sombre native](docs/screenshots/history-dark.png) |
 
 Les captures montrent l’application réelle avec des données synthétiques, sans contenu personnel.
 
@@ -20,11 +20,14 @@ Les flèches sélectionnent une ligne ; **Entrée** ou un double-clic colle la s
 
 - Dernière copie au rang 1 ; les doublons strictement identiques remontent en tête. Les mises en forme différentes restent distinctes.
 - Texte pur, HTML, RTF, images, références de fichiers et représentations privées disponibles sont conservés sans normaliser leurs octets. Miniatures et résumés sont séparés des originaux.
-- **20 entrées**, **256 Mio**, police **12 points**, vue compacte, aperçus et tailles affichés par défaut.
+- **20 entrées**, **256 Mio**, police **12 points**, mode compact et tailles affichées par défaut.
+- Trois densités : **compact** sur une ligne sans aperçu ni icône, avec numéro à hauteur du texte ; **normal** avec aperçu et deux lignes ajustées au contenu ; **large** avec davantage d’espace. La police reste identique dans les trois modes. Les détails restent accessibles au survol et aux technologies d’assistance en mode compact.
 - Fenêtre instantanée, sans fondu par défaut ; animations facultatives. Largeur minimale de 280 points.
 - Position fixe mémorisée ou ouverture au pointeur, avec choix de quatre quadrants ; bas à droite par défaut. Déplacer la fenêtre la fixe à son nouvel emplacement.
 - Mode sombre **activé / désactivé / automatique**, français/anglais avec changement de langue immédiat, police réglable de 10 à 28 points.
 - Persistance et lancement silencieux à l’ouverture de session **désactivés par défaut**.
+
+Les installations existantes conservent leur disposition : l’ancienne vue compacte devient **normal**, l’ancienne vue espacée devient **large**. Le choix des aperçus reste mémorisé lorsqu’on utilise le mode compact.
 
 ![Réglages natifs de One Clipboard History](docs/screenshots/settings.png)
 
@@ -32,7 +35,7 @@ Les flèches sélectionnent une ligne ; **Entrée** ou un double-clic colle la s
 
 Télécharger le ZIP depuis [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), l’extraire et placer **One Clipboard History.app** dans Applications. Quitter l’ancienne application avant de la remplacer.
 
-**État de la version 0.7.0 :** la version personnelle est signée localement (ad hoc). La signature Developer ID et la notarisation nécessitent un certificat Apple ; un build local n’est pas une distribution validée par Gatekeeper. Le projet prépare une variante Mac App Store, sans annoncer sa disponibilité sur le Store. Voir le [dossier de préparation](docs/APP_STORE.md) et les [preuves de validation](docs/VALIDATION.md).
+**État de la version 0.8.0 :** la version personnelle est signée localement (ad hoc). La signature Developer ID et la notarisation nécessitent un certificat Apple ; un build local n’est pas une distribution validée par Gatekeeper. Le projet prépare une variante Mac App Store, sans annoncer sa disponibilité sur le Store. Voir le [dossier de préparation](docs/APP_STORE.md) et les [preuves de validation](docs/VALIDATION.md).
 
 L’application démarre dans la barre de menus. Fermer la fenêtre laisse la capture active ; **Quitter One Clipboard History** l’arrête. Dans Réglages → Général, l’option de lancement à la connexion reste silencieuse et respecte les changements effectués dans macOS.
 

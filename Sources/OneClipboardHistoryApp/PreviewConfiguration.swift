@@ -23,7 +23,7 @@ struct PreviewConfiguration {
         defaults.set(appearance.rawValue, forKey: "appearanceMode")
         defaults.set(language.rawValue, forKey: "language")
         defaults.set(12.0, forKey: "historyFontSize")
-        defaults.set(true, forKey: "compactView")
+        defaults.set(HistoryDensity.compact.rawValue, forKey: "historyDensity")
         defaults.set(false, forKey: "animationsEnabled")
         defaults.set(false, forKey: "persistenceEnabled")
         return defaults

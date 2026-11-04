@@ -20,7 +20,7 @@ struct OpeningPerformanceTests {
             ])])
             return HistoryRow(entry: entry, presentation: .placeholder(for: entry))
         }
-        panel.update(rows: rows, showPreviews: true, showSizes: true, status: nil)
+        panel.update(rows: rows, showPreviews: true, showSizes: true, status: nil, density: .normal)
         let window = try #require(panel.window)
         defer { panel.hide(); window.close() }
         var samples: [Double] = []

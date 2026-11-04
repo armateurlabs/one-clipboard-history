@@ -4,9 +4,9 @@ A native clipboard history for **macOS 27 on Apple Silicon**, built with Swift, 
 
 [Français](README.md) · [Downloads](https://github.com/armateurlabs/one-clipboard-history/releases) · [MIT license](LICENSE) · [Privacy](PRIVACY.md)
 
-| Light appearance | Dark appearance |
+| Normal mode, light | Normal mode, dark |
 | --- | --- |
-| ![Compact clipboard history with synthetic text, code, image and file entries](docs/screenshots/history-light.png) | ![The same history using the native dark appearance](docs/screenshots/history-dark.png) |
+| ![Normal clipboard history with synthetic text, code, image and file entries](docs/screenshots/history-light.png) | ![The same history using the native dark appearance](docs/screenshots/history-dark.png) |
 
 Screenshots show the real application with synthetic examples, never personal clipboard contents.
 
@@ -20,11 +20,14 @@ Arrow keys select an entry; **Return** or a double-click pastes it; **Escape** h
 
 - Newest copy first. Exact duplicates move to the top; different formatting stays distinct.
 - Preserve the bytes of plain text, HTML, RTF, images, file references and available private representations. Thumbnails and summaries never replace original data.
-- Defaults: **20 entries**, **256 MiB**, **12 pt**, compact rows, previews and sizes visible.
+- Defaults: **20 entries**, **256 MiB**, **12 pt**, compact mode and sizes visible.
+- Three densities: **compact** uses one line without previews or icons, with a rank block matching the text height; **normal** fits a preview and two text lines; **large** adds spacing. Font size stays the same across all three modes. Compact mode keeps details in tooltips and accessibility labels.
 - Instant window display with no fade by default; optional native animations. Minimum width: 280 points.
 - Remember a fixed position or open by the pointer in one of four quadrants; bottom right by default. Moving the window pins its location.
 - Dark mode **on / off / automatic**, live French/English localization, adjustable 10–28 pt text.
 - Persistence and silent launch at login are **off by default**.
+
+Existing installations keep their layout: the previous compact view becomes **normal**, while the previous roomy view becomes **large**. The preview preference is remembered while using compact mode.
 
 ![Native One Clipboard History settings](docs/screenshots/settings.png)
 
@@ -32,7 +35,7 @@ Arrow keys select an entry; **Return** or a double-click pastes it; **Escape** h
 
 Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-**Version 0.7.0 status:** the personal build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; a local build is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.en.md) and [validation evidence](docs/VALIDATION.md).
+**Version 0.8.0 status:** the personal build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; a local build is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.en.md) and [validation evidence](docs/VALIDATION.md).
 
 The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 

@@ -28,7 +28,7 @@ require(identifier == expected, f'unexpected bundle ID {identifier!r}')
 name = 'One Clipboard History Preview' if info.get('OCHPreviewMode') is True else 'One Clipboard History'
 require(info.get('CFBundleName') == name and info.get('CFBundleDisplayName') == name, 'incorrect app name')
 require(info.get('CFBundleExecutable') == 'OneClipboardHistory', 'incorrect executable name')
-require(info.get('CFBundleShortVersionString') == '0.7.0' and info.get('CFBundleVersion') == '7', 'incorrect release version')
+require(info.get('CFBundleShortVersionString') == '0.8.0' and info.get('CFBundleVersion') == '8', 'incorrect release version')
 require(info.get('LSUIElement') is True, 'menu bar agent flag is missing')
 require(info.get('LSMinimumSystemVersion') == '27.0', 'incorrect deployment target')
 require(info.get('LSApplicationCategoryType') == 'public.app-category.productivity', 'app category is missing')
@@ -65,5 +65,5 @@ if store:
         require(entitlements.get(key) is True, f'{key} is missing from the code signature')
     require(not entitlements.get('com.apple.security.get-task-allow'), 'Release archive allows debugging')
     require(not any('temporary-exception' in key or key == 'com.apple.security.accessibility' for key in entitlements), 'unexpected sandbox exception')
-print(f'Validated {name} 0.7.0 (7), {identifier}' + (' — sandbox enabled' if store else ''))
+print(f'Validated {name} 0.8.0 (8), {identifier}' + (' — sandbox enabled' if store else ''))
 PY

@@ -144,12 +144,15 @@
 "Top right" = "Top right";
 "Bottom left" = "Bottom left";
 "Bottom right" = "Bottom right";
-"Compact view" = "Compact view";
+"History density" = "History density";
+"Compact" = "Compact";
+"Normal" = "Normal";
+"Large" = "Large";
 "Dark mode" = "Dark mode";
 "Automatic (system)" = "Automatic (system)";
 "Enabled" = "Enabled";
 "Disabled" = "Disabled";
-"Fit rows to their content without changing text or preview size." = "Fit rows to their content without changing text or preview size.";
+"Compact uses one text line without previews or icons. Normal fits rows to their content. Large adds spacing." = "Compact uses one text line without previews or icons. Normal fits rows to their content. Large adds spacing.";
 "General" = "General";
 "Launch at login" = "Launch at login";
 "Start silently in the menu bar when you sign in." = "Start silently in the menu bar when you sign in.";

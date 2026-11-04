@@ -78,8 +78,12 @@ struct SettingsView: View {
                     Text(L10n.text("Enabled")).tag(AppearanceMode.dark)
                     Text(L10n.text("Disabled")).tag(AppearanceMode.light)
                 }
-                Toggle(L10n.text("Compact view"), isOn: $settings.compactView)
-                Text(L10n.text("Fit rows to their content without changing text or preview size."))
+                Picker(L10n.text("History density"), selection: $settings.historyDensity) {
+                    ForEach(HistoryDensity.allCases) { density in
+                        Text(density.displayName).tag(density)
+                    }
+                }
+                Text(L10n.text("Compact uses one text line without previews or icons. Normal fits rows to their content. Large adds spacing."))
                     .font(.caption).foregroundStyle(.secondary)
                 LabeledContent(L10n.text("History font size")) {
                     HStack(spacing: 12) {
@@ -93,6 +97,7 @@ struct SettingsView: View {
                     }.frame(width: 240)
                 }
                 Toggle(L10n.text("Show image previews"), isOn: $settings.showPreviews)
+                    .disabled(settings.historyDensity == .compact)
                 Toggle(L10n.text("Show data size"), isOn: $settings.showSizes)
                 Picker(L10n.text("Language"), selection: $settings.language) {
                     Text(L10n.text("System language")).tag(AppLanguage.system)

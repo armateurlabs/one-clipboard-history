@@ -199,12 +199,13 @@ final class AppController {
             presentationWorkers.removeValue(forKey: entry.id)?.cancel()
         }
         entries = newEntries
-        if cacheIncludesPreviews != settings.showPreviews {
+        let includeThumbnail = settings.showPreviews && settings.historyDensity != .compact
+        if cacheIncludesPreviews != includeThumbnail {
             presentationCache.removeAll()
             for worker in presentationWorkers.values { worker.cancel() }
             presentationWorkers.removeAll()
             presentationGeneration += 1
-            cacheIncludesPreviews = settings.showPreviews
+            cacheIncludesPreviews = includeThumbnail
         }
         let live = Set(newEntries.map(\.id))
         presentationCache = presentationCache.filter { live.contains($0.key) }
@@ -217,7 +218,6 @@ final class AppController {
         // the history; no file metadata or image contents are read here yet.
         guard capturePermissionRequestsAllowed else { return }
         let missing = newEntries.filter { presentationCache[$0.id] == nil && presentationWorkers[$0.id] == nil }
-        let includeThumbnail = settings.showPreviews
         let generation = presentationGeneration
         for entry in missing {
             presentationWorkers[entry.id] = Task { @MainActor [weak self] in
@@ -268,7 +268,7 @@ final class AppController {
         }
         panel.update(rows: rows, showPreviews: settings.showPreviews, showSizes: settings.showSizes,
                      status: status, fontSize: settings.historyFontSize, animationsEnabled: settings.animationsEnabled,
-                     compactView: settings.compactView)
+                     density: settings.historyDensity)
     }
 
     private func setStatus(_ message: String?, error: (any Error)? = nil) {

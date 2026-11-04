@@ -29,7 +29,7 @@ struct SettingsTests {
         #expect(settings.budgetMegabytes == 256)
         #expect(settings.showPreviews)
         #expect(settings.showSizes)
-        #expect(settings.compactView)
+        #expect(settings.historyDensity == .compact)
         #expect(settings.hideAfterPasting)
         #expect(!settings.positionAtPointer)
         #expect(settings.pointerQuadrant == .bottomRight)
@@ -187,7 +187,7 @@ struct SettingsTests {
         #expect(settings.historyFontSize == 22)
     }
 
-    @Test func compactViewDefaultsOnForExistingPreferencesWithoutChangingContentSizes() {
+    @Test func densityDefaultsToCompactWithoutChangingTextOrPreviewPreferences() {
         let (name, defaults) = isolatedDefaults()
         defer { defaults.removePersistentDomain(forName: name) }
         defaults.set(22.0, forKey: "historyFontSize")
@@ -195,30 +195,45 @@ struct SettingsTests {
         defaults.set(45, forKey: "historyLimit")
 
         let settings = AppSettings(defaults: defaults)
-        #expect(settings.compactView)
+        #expect(settings.historyDensity == .compact)
         #expect(settings.historyFontSize == 22)
         #expect(settings.showPreviews)
         #expect(settings.historyLimit == 45)
     }
 
-    @Test func compactViewPersistsAndNotifiesWithoutChangingTextOrPreviews() {
+    @Test func densityPersistsAndNotifiesWithoutChangingTextOrPreviewPreferences() {
         let (name, defaults) = isolatedDefaults()
         defer { defaults.removePersistentDomain(forName: name) }
         defaults.set(18.0, forKey: "historyFontSize")
-        defaults.set(false, forKey: "showPreviews")
+        defaults.set(true, forKey: "showPreviews")
         let settings = AppSettings(defaults: defaults)
         var changes = 0
         settings.onChange = { changes += 1 }
 
-        for compact in [false, true] {
-            settings.compactView = compact
+        for density in HistoryDensity.allCases {
+            settings.historyDensity = density
             let reloaded = AppSettings(defaults: defaults)
-            #expect(reloaded.compactView == compact)
-            #expect(defaults.bool(forKey: "compactView") == compact)
+            #expect(reloaded.historyDensity == density)
+            #expect(defaults.string(forKey: "historyDensity") == density.rawValue)
             #expect(reloaded.historyFontSize == 18)
-            #expect(!reloaded.showPreviews)
+            #expect(reloaded.showPreviews)
         }
-        #expect(changes == 2)
+        #expect(changes == 3)
+    }
+
+    @Test func legacyCompactPreferenceMigratesWithoutChangingTheExistingLayout() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        for (legacy, expected) in [(true, HistoryDensity.normal), (false, .large)] {
+            defaults.set(legacy, forKey: "compactView")
+            #expect(AppSettings(defaults: defaults).historyDensity == expected)
+            // Registering defaults on the same instance must not hide legacy data.
+            #expect(AppSettings(defaults: defaults).historyDensity == expected)
+        }
+        defaults.set(HistoryDensity.compact.rawValue, forKey: "historyDensity")
+        #expect(AppSettings(defaults: defaults).historyDensity == .compact)
+        defaults.set("unknown-density", forKey: "historyDensity")
+        #expect(AppSettings(defaults: defaults).historyDensity == .compact)
     }
 
     @Test func appearanceModesPersistAndNotifyWithoutChangingOtherPreferences() {
@@ -238,7 +253,7 @@ struct SettingsTests {
             #expect(reloaded.appearanceMode == mode)
             #expect(defaults.string(forKey: "appearanceMode") == mode.rawValue)
             #expect(reloaded.historyFontSize == 22)
-            #expect(!reloaded.compactView)
+            #expect(reloaded.historyDensity == .large)
             #expect(!reloaded.showPreviews)
             #expect(!reloaded.hideAfterPasting)
         }

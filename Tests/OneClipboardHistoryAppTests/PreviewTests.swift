@@ -18,7 +18,7 @@ struct PreviewTests {
         #expect(settings.appearanceMode == .dark)
         #expect(settings.language == .french)
         #expect(settings.historyFontSize == 12)
-        #expect(settings.compactView)
+        #expect(settings.historyDensity == .compact)
         #expect(!settings.persistenceEnabled)
         #expect(!settings.animationsEnabled)
         #expect(settings.savedFrame == nil)

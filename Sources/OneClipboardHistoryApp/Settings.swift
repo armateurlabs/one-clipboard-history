@@ -20,6 +20,22 @@ enum AppearanceMode: String, CaseIterable, Sendable, Identifiable {
     var id: String { rawValue }
 }
 
+enum HistoryDensity: String, CaseIterable, Sendable, Identifiable {
+    case compact
+    case normal
+    case large
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .compact: L10n.text("Compact")
+        case .normal: L10n.text("Normal")
+        case .large: L10n.text("Large")
+        }
+    }
+}
+
 struct KeyboardShortcut: Codable, Equatable, Sendable {
     var keyCode: UInt32
     var modifiers: UInt32
@@ -68,7 +84,7 @@ final class AppSettings: ObservableObject {
     @Published var budgetMegabytes: Int { didSet { save() } }
     @Published var showPreviews: Bool { didSet { save() } }
     @Published var showSizes: Bool { didSet { save() } }
-    @Published var compactView: Bool { didSet { save() } }
+    @Published var historyDensity: HistoryDensity { didSet { save() } }
     @Published var hideAfterPasting: Bool { didSet { save() } }
     @Published var positionAtPointer: Bool { didSet { save() } }
     @Published var pointerQuadrant: PointerQuadrant { didSet { save() } }
@@ -92,9 +108,19 @@ final class AppSettings: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let density: HistoryDensity
+        if defaults.object(forKey: "historyDensity") != nil {
+            density = defaults.string(forKey: "historyDensity").flatMap(HistoryDensity.init(rawValue:)) ?? .compact
+        } else if let legacyCompact = defaults.object(forKey: "compactView") as? Bool {
+            // Keep existing installations visually unchanged. The previous
+            // fitted-row layout is now Normal; the roomy layout is Large.
+            density = legacyCompact ? .normal : .large
+        } else {
+            density = .compact
+        }
         defaults.register(defaults: [
             "historyLimit": 20, "budgetMegabytes": 256, "showPreviews": true,
-            "showSizes": true, "compactView": true, "hideAfterPasting": true, "positionAtPointer": false,
+            "showSizes": true, "hideAfterPasting": true, "positionAtPointer": false,
             "persistenceEnabled": false, "historyFontSize": 12.0,
             "pointerQuadrant": PointerQuadrant.bottomRight.rawValue,
             "animationsEnabled": false, "appearanceMode": AppearanceMode.system.rawValue,
@@ -104,7 +130,7 @@ final class AppSettings: ObservableObject {
         budgetMegabytes = max(1, min(defaults.integer(forKey: "budgetMegabytes"), 1_048_576))
         showPreviews = defaults.bool(forKey: "showPreviews")
         showSizes = defaults.bool(forKey: "showSizes")
-        compactView = defaults.bool(forKey: "compactView")
+        historyDensity = density
         hideAfterPasting = defaults.bool(forKey: "hideAfterPasting")
         positionAtPointer = defaults.bool(forKey: "positionAtPointer")
         pointerQuadrant = defaults.string(forKey: "pointerQuadrant").flatMap(PointerQuadrant.init(rawValue:)) ?? .bottomRight
@@ -121,7 +147,7 @@ final class AppSettings: ObservableObject {
         defaults.set(max(1, min(budgetMegabytes, 1_048_576)), forKey: "budgetMegabytes")
         defaults.set(showPreviews, forKey: "showPreviews")
         defaults.set(showSizes, forKey: "showSizes")
-        defaults.set(compactView, forKey: "compactView")
+        defaults.set(historyDensity.rawValue, forKey: "historyDensity")
         defaults.set(hideAfterPasting, forKey: "hideAfterPasting")
         defaults.set(positionAtPointer, forKey: "positionAtPointer")
         defaults.set(pointerQuadrant.rawValue, forKey: "pointerQuadrant")
