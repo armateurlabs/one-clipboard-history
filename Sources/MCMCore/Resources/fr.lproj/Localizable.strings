@@ -119,3 +119,12 @@
 "Enabled" = "Activé";
 "Disabled" = "Désactivé";
 "Fit rows to their content without changing text or preview size." = "Adapter les lignes à leur contenu sans changer la taille du texte ni de l’aperçu.";
+"General" = "Général";
+"Launch at login" = "Lancer à l’ouverture de session";
+"Start silently in the menu bar when you sign in." = "Démarrer silencieusement dans la barre de menus à l’ouverture de votre session.";
+"Allow mcm in System Settings to finish enabling launch at login." = "Autorisez mcm dans les Réglages Système pour terminer l’activation du lancement à l’ouverture de session.";
+"Open Login Items Settings…" = "Ouvrir les réglages d’ouverture de session…";
+"Launch at login is unavailable. Open the installed mcm application and try again." = "Le lancement à l’ouverture de session est indisponible. Ouvrez l’application mcm installée et réessayez.";
+"macOS did not enable launch at login." = "macOS n’a pas activé le lancement à l’ouverture de session.";
+"Could not change launch at login: %@" = "Impossible de modifier le lancement à l’ouverture de session : %@";
+"Open mcm to allow clipboard access and start capturing." = "Ouvrez mcm pour autoriser l’accès au presse-papiers et démarrer la capture.";

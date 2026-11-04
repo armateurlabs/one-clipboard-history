@@ -119,3 +119,12 @@
 "Enabled" = "Enabled";
 "Disabled" = "Disabled";
 "Fit rows to their content without changing text or preview size." = "Fit rows to their content without changing text or preview size.";
+"General" = "General";
+"Launch at login" = "Launch at login";
+"Start silently in the menu bar when you sign in." = "Start silently in the menu bar when you sign in.";
+"Allow mcm in System Settings to finish enabling launch at login." = "Allow mcm in System Settings to finish enabling launch at login.";
+"Open Login Items Settings…" = "Open Login Items Settings…";
+"Launch at login is unavailable. Open the installed mcm application and try again." = "Launch at login is unavailable. Open the installed mcm application and try again.";
+"macOS did not enable launch at login." = "macOS did not enable launch at login.";
+"Could not change launch at login: %@" = "Could not change launch at login: %@";
+"Open mcm to allow clipboard access and start capturing." = "Open mcm to allow clipboard access and start capturing.";

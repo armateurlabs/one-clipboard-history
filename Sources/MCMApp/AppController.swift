@@ -13,6 +13,7 @@ struct HistoryRow: Identifiable, Sendable {
 @MainActor
 final class AppController {
     let settings: AppSettings
+    let loginItem: LoginItemController
     let panel = HistoryPanelController()
     private let pasteboard: PasteboardService
     private let repository: HistoryRepository
@@ -37,6 +38,8 @@ final class AppController {
     private var lastExternalApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
+    private var applicationActivationObserver: NSObjectProtocol?
+    private var capturePermissionRequestsAllowed = false
     private var pasteInProgress = false
     private var shuttingDown = false
     private var operationGeneration = 0
@@ -48,6 +51,7 @@ final class AppController {
         AppAppearance.apply(settings.appearanceMode)
         L10n.configure(settings.language)
         appliedLanguage = settings.language
+        loginItem = demo ? .preview() : LoginItemController()
         let directory = demo
             ? FileManager.default.temporaryDirectory.appendingPathComponent("mcm-demo-\(UUID().uuidString)", isDirectory: true)
             : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -96,6 +100,9 @@ final class AppController {
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
         ) { [weak self] _ in Task { @MainActor [weak self] in self?.restartCapture() } }
+        applicationActivationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: NSApp, queue: .main
+        ) { [weak self] _ in Task { @MainActor [weak self] in self?.loginItem.refresh() } }
         enqueue { [weak self] in
             guard let self else { return }
             do {
@@ -121,6 +128,7 @@ final class AppController {
         hotkey.stop()
         if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+        if let applicationActivationObserver { NotificationCenter.default.removeObserver(applicationActivationObserver) }
     }
 
     func shutdown() async {
@@ -145,7 +153,7 @@ final class AppController {
             Task { @MainActor [weak self] in self?.receive(entry) }
         }, onStatus: { [weak self] message in
             Task { @MainActor [weak self] in self?.setStatus(message) }
-        })
+        }, allowPermissionPrompts: capturePermissionRequestsAllowed)
     }
 
     private func receive(_ entry: ClipboardEntry) {
@@ -188,6 +196,10 @@ final class AppController {
             presentationWorkers.removeValue(forKey: id)?.cancel()
         }
         rebuildRows()
+        // Saved file previews can also require a macOS privacy prompt. During
+        // background startup, use display-only placeholders until the user opens
+        // the history; no file metadata or image contents are read here yet.
+        guard capturePermissionRequestsAllowed else { return }
         let missing = newEntries.filter { presentationCache[$0.id] == nil && presentationWorkers[$0.id] == nil }
         let includeThumbnail = settings.showPreviews
         let generation = presentationGeneration
@@ -233,10 +245,19 @@ final class AppController {
     }
 
     func show() {
+        let needsPresentationEnrichment = !capturePermissionRequestsAllowed
+        capturePermissionRequestsAllowed = true
+        pasteboard.allowPermissionRequests()
         let current = NSWorkspace.shared.frontmostApplication
         pasteTarget = current?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? lastExternalApplication : current
         let start = ContinuousClock.now
         panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
+        if needsPresentationEnrichment {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                await refresh(entries)
+            }
+        }
         let duration = start.duration(to: .now)
         // This records timing only: never log clipboard contents or source metadata.
         if ProcessInfo.processInfo.arguments.contains("--measure") {
@@ -339,6 +360,7 @@ final class AppController {
         if appliedLanguage != settings.language {
             L10n.configure(settings.language)
             appliedLanguage = settings.language
+            loginItem.refresh()
             presentationCache.removeAll()
             for worker in presentationWorkers.values { worker.cancel() }
             presentationWorkers.removeAll()
@@ -380,8 +402,9 @@ final class AppController {
     }
 
     func showSettings() {
+        loginItem.refresh()
         if settingsWindow == nil {
-            let view = SettingsView(settings: settings, onAccessibility: { [weak self] in self?.requestAccessibility() },
+            let view = SettingsView(settings: settings, loginItem: loginItem, onAccessibility: { [weak self] in self?.requestAccessibility() },
                 onPasteboardSettings: {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Pasteboard") {
                         NSWorkspace.shared.open(url)

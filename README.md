@@ -21,6 +21,10 @@ MCM_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' ./scripts/build
 
 Le projet peut aussi être ouvert dans Xcode via `Package.swift`. L’application reste dans la barre de menus après fermeture de sa fenêtre ; le menu de mcm permet de la quitter.
 
+Dans **Réglages → Général**, activer **Lancer à l’ouverture de session** pour démarrer mcm silencieusement à la connexion : aucune fenêtre ne s’ouvre et le focus reste dans l’application utilisée. L’option est désactivée par défaut. Elle utilise les éléments d’ouverture de session natifs de macOS ; si une approbation est nécessaire, mcm propose d’ouvrir les réglages système correspondants. La désactiver n’arrête pas mcm actuellement ouvert.
+
+Au démarrage en arrière-plan, la capture reprend si l’accès au presse-papiers est déjà autorisé. Sinon, la demande d’accès attend l’ouverture de l’historique ; les aperçus de fichiers sont également différés pour éviter une demande de permission pendant la connexion. Les changements faits directement dans les éléments d’ouverture de session de macOS sont respectés et réaffichés dans mcm.
+
 ## Utiliser l’historique
 
 - **⌥A** ouvre ou masque la palette ; le raccourci initial est résolu selon la disposition du clavier. Si Quicksilver utilise déjà cette combinaison, libérer son raccourci ou choisir une autre combinaison dans mcm.

@@ -4,12 +4,40 @@ import MCMCore
 
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject var loginItem: LoginItemController
     let onAccessibility: () -> Void
     let onPasteboardSettings: () -> Void
     let onClear: () -> Void
 
+    init(settings: AppSettings, loginItem: LoginItemController = .preview(),
+         onAccessibility: @escaping () -> Void, onPasteboardSettings: @escaping () -> Void,
+         onClear: @escaping () -> Void) {
+        self.settings = settings
+        self.loginItem = loginItem
+        self.onAccessibility = onAccessibility
+        self.onPasteboardSettings = onPasteboardSettings
+        self.onClear = onClear
+    }
+
     var body: some View {
         Form {
+            Section(L10n.text("General")) {
+                Toggle(L10n.text("Launch at login"), isOn: Binding(
+                    get: { loginItem.isEnabled },
+                    set: { loginItem.setEnabled($0) }
+                ))
+                .disabled(loginItem.isBusy)
+                Text(L10n.text("Start silently in the menu bar when you sign in."))
+                    .font(.caption).foregroundStyle(.secondary)
+                if loginItem.requiresApproval {
+                    Text(L10n.text("Allow mcm in System Settings to finish enabling launch at login."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button(L10n.text("Open Login Items Settings…")) { loginItem.openSystemSettings() }
+                }
+                if let error = loginItem.errorMessage {
+                    Text(L10n.text(error)).font(.caption).foregroundStyle(.red)
+                }
+            }
             Section(L10n.text("History")) {
                 TextField(L10n.text("Number of entries"), value: $settings.historyLimit, format: .number)
                 TextField(L10n.text("Data budget (MiB)"), value: $settings.budgetMegabytes, format: .number)
@@ -74,6 +102,7 @@ struct SettingsView: View {
         .environment(\.locale, L10n.currentLocale)
         .padding(8)
         .frame(width: 520, height: 740)
+        .onAppear { loginItem.refresh() }
     }
 }
 

@@ -4,6 +4,7 @@ import MPasteboardBridge
 
 public enum PasteboardServiceError: LocalizedError, Sendable {
     case accessDenied
+    case permissionRequired
     case changedDuringCapture
     case incompleteCapture([String])
     case unavailableFiles([String])
@@ -14,6 +15,8 @@ public enum PasteboardServiceError: LocalizedError, Sendable {
         switch self {
         case .accessDenied:
             return L10n.text("Clipboard access is denied in System Settings.")
+        case .permissionRequired:
+            return L10n.text("Open mcm to allow clipboard access and start capturing.")
         case .changedDuringCapture:
             return L10n.text("The clipboard changed during capture; it will be read again.")
         case .incompleteCapture(let types):
@@ -25,6 +28,17 @@ public enum PasteboardServiceError: LocalizedError, Sendable {
         case .writeFailed:
             return L10n.text("macOS could not restore the clipboard contents.")
         }
+    }
+}
+
+/// Reading permission metadata is safe at login; reading content can prompt.
+/// Keep this policy independent of any real pasteboard for deterministic tests.
+enum ClipboardPermissionPolicy {
+    static func canRead(
+        accessBehavior: NSPasteboard.AccessBehavior, allowPermissionPrompts: Bool
+    ) -> Bool {
+        guard accessBehavior != .alwaysDeny else { return false }
+        return allowPermissionPrompts || accessBehavior == .alwaysAllow
     }
 }
 
@@ -42,6 +56,7 @@ public final class PasteboardService: @unchecked Sendable {
     private var previousStatus: String?
     private var polling = false
     private var active = false
+    private var permissionPromptsAllowed = true
 
     public init(pasteboardName: String? = nil) {
         self.pasteboardName = pasteboardName
@@ -49,11 +64,13 @@ public final class PasteboardService: @unchecked Sendable {
 
     public func start(
         onCapture: @escaping @Sendable (ClipboardEntry) -> Void,
-        onStatus: @escaping @Sendable (String?) -> Void
+        onStatus: @escaping @Sendable (String?) -> Void,
+        allowPermissionPrompts: Bool = true
     ) {
         queue.async { [self] in
             self.onCapture = onCapture
             self.onStatus = onStatus
+            permissionPromptsAllowed = allowPermissionPrompts
             active = true
             guard timer == nil else { return }
             let source = DispatchSource.makeTimerSource(queue: queue)
@@ -61,6 +78,15 @@ public final class PasteboardService: @unchecked Sendable {
             source.setEventHandler { [weak self] in self?.poll() }
             timer = source
             source.resume()
+        }
+    }
+
+    /// Called only after an explicit interaction with mcm. Background startup
+    /// never grants permission or makes the system display an access request.
+    public func allowPermissionRequests() {
+        queue.async { [self] in
+            permissionPromptsAllowed = true
+            poll()
         }
     }
 
@@ -156,7 +182,16 @@ public final class PasteboardService: @unchecked Sendable {
         guard active, !polling else { return }
         let current: Int
         do {
-            current = try withPasteboardBoundary { board().changeCount }
+            current = try withPasteboardBoundary {
+                let accessBehavior = board().accessBehavior
+                guard ClipboardPermissionPolicy.canRead(
+                    accessBehavior: accessBehavior, allowPermissionPrompts: permissionPromptsAllowed
+                ) else {
+                    throw accessBehavior == .alwaysDeny
+                        ? PasteboardServiceError.accessDenied : PasteboardServiceError.permissionRequired
+                }
+                return board().changeCount
+            }
         } catch {
             report(error.localizedDescription)
             return
@@ -173,7 +208,8 @@ public final class PasteboardService: @unchecked Sendable {
                 defer { self.polling = false }
                 guard self.active else { return }
                 do {
-                    if let entry = try self.capture(sourceAppName: name, sourceBundleIdentifier: identifier) {
+                    if let entry = try self.capture(sourceAppName: name, sourceBundleIdentifier: identifier,
+                                                    allowPermissionPrompts: self.permissionPromptsAllowed) {
                         self.report(entry.isComplete ? nil : PasteboardServiceError.incompleteCapture(entry.missingTypes).localizedDescription)
                         self.onCapture?(entry)
                     }
@@ -184,15 +220,23 @@ public final class PasteboardService: @unchecked Sendable {
         }
     }
 
-    private func capture(sourceAppName: String?, sourceBundleIdentifier: String?) throws -> ClipboardEntry? {
+    private func capture(sourceAppName: String?, sourceBundleIdentifier: String?,
+                         allowPermissionPrompts: Bool = true) throws -> ClipboardEntry? {
         try withPasteboardBoundary {
-            try captureUnchecked(sourceAppName: sourceAppName, sourceBundleIdentifier: sourceBundleIdentifier)
+            try captureUnchecked(sourceAppName: sourceAppName, sourceBundleIdentifier: sourceBundleIdentifier,
+                                 allowPermissionPrompts: allowPermissionPrompts)
         }
     }
 
-    private func captureUnchecked(sourceAppName: String?, sourceBundleIdentifier: String?) throws -> ClipboardEntry? {
+    private func captureUnchecked(sourceAppName: String?, sourceBundleIdentifier: String?,
+                                  allowPermissionPrompts: Bool) throws -> ClipboardEntry? {
         let board = board()
-        if board.accessBehavior == .alwaysDeny { throw PasteboardServiceError.accessDenied }
+        let accessBehavior = board.accessBehavior
+        if accessBehavior == .alwaysDeny { throw PasteboardServiceError.accessDenied }
+        guard ClipboardPermissionPolicy.canRead(accessBehavior: accessBehavior,
+                                                 allowPermissionPrompts: allowPermissionPrompts) else {
+            throw PasteboardServiceError.permissionRequired
+        }
         let before = board.changeCount
         guard before != lastObservedCount, before != lastOwnWriteCount else { return nil }
         let originalItems = board.pasteboardItems ?? []

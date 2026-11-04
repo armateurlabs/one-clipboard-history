@@ -1,6 +1,6 @@
 # Validation de mcm — 4 novembre 2026
 
-État de validation de la version personnelle 0.5.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **78 tests**, dont 40 sur les données, la persistance et la localisation et 38 sur AppKit, les réglages, le placement, l’apparence et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
+État de validation de la version personnelle 0.6.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **93 tests**, dont 43 sur les données, la persistance, la localisation et les permissions de capture et 50 sur AppKit, les réglages, le lancement, le placement, l’apparence et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
 
 ## Contrôles automatisés
 
@@ -28,6 +28,8 @@ Les contrôles implémentés et exercés couvrent :
 - Quatre quadrants autour du pointeur, bas à droite par défaut, écart de 12 points, limites de l’écran, écrans à origine négative et sauvegarde du quadrant lors du passage en position fixe.
 - Animations désactivées par défaut, activables puis désactivables, sans transparence résiduelle.
 - Mode sombre activé/désactivé/automatique persistant ; la palette et les vrais réglages SwiftUI héritent immédiatement de l’apparence. Le retour automatique supprime l’apparence forcée et suit macOS. Les tests restaurent l’apparence du processus sans modifier le système.
+- Lancement à l’ouverture de session : services simulés pour activation, désactivation, idempotence, approbation, erreurs, état modifié dans macOS et aperçu sans enregistrement réel. Les événements d’ouverture et de réouverture marqués login/service restent silencieux ; un lancement manuel reste interactif.
+- Capture en arrière-plan uniquement avec accès déjà autorisé, demandes de permission différées jusqu’à l’ouverture de l’historique, sans lecture du presse-papiers général dans les tests.
 - Catalogues français/anglais complets, arguments de formatage, langue système et changement de langue sans transformation des données originales.
 
 Ces fixtures ne prouvent pas que Word ou Excel interpréteront toutes leurs représentations privées exactement comme lors d’un collage direct.
@@ -44,12 +46,16 @@ Pour la version 0.4.0, les lignes compactes ont été comparées visuellement à
 
 Pour la version 0.5.0, le mode sombre a été activé visuellement dans l’aperçu : fond, contrôles, titres, sélection et numéros de l’historique restent lisibles. Le passage au mode clair a été vérifié dans les réglages, puis le choix automatique a été restauré. Aucun réglage d’apparence global de macOS n’a été modifié.
 
+Pour la version 0.6.0, la nouvelle section Général et son option de lancement silencieux ont été vérifiées dans l’aperçu : désactivée initialement, activée puis désactivée. Cet aperçu utilise un service simulé en mémoire : aucun véritable élément d’ouverture de session n’a été enregistré ni supprimé pendant les tests.
+
 Deux fixtures de fournisseurs différés internes au processus de test produisent un avertissement AppKit d’affinité de thread. Le fournisseur différé testé dans un processus distinct remplit sa promesse sur son propre fil principal, sans cet avertissement ; la récupération des octets et la gestion d’une exception sont vérifiées.
 
 ## Recette manuelle restant à effectuer
 
 | Scénario | Résultat attendu |
 | --- | --- |
+| Activation du lancement automatique depuis `/Applications/mcm.app`, puis nouvelle ouverture de session | mcm reste dans la barre de menus, sans fenêtre, activation ou demande de permission ; le raccourci ouvre l’historique. Ce scénario réel nécessite une déconnexion et n’a pas été exécuté automatiquement. |
+| Désactivation ou retrait dans les réglages système | mcm ne réenregistre pas automatiquement l’option ; les réglages reflètent l’état courant. |
 | Raccourci global sur le clavier réel, y compris conflit avec Quicksilver | ⌥A ouvre et masque mcm ; un conflit est signalé et un autre raccourci peut être enregistré. |
 | Collage automatique avec autorisations accordées | Un numéro ou Entrée colle une seule fois dans l’application précédente ; l’entrée remonte en tête. |
 | Autorisations refusées ou révoquées | Une indication est affichée ; le collage manuel reste possible pour une entrée recopiée. |
