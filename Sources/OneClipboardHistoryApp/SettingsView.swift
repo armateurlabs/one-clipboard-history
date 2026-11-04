@@ -101,8 +101,9 @@ struct SettingsView: View {
                 Toggle(L10n.text("Show data size"), isOn: $settings.showSizes)
                 Picker(L10n.text("Language"), selection: $settings.language) {
                     Text(L10n.text("System language")).tag(AppLanguage.system)
-                    Text(L10n.text("French")).tag(AppLanguage.french)
-                    Text(L10n.text("English")).tag(AppLanguage.english)
+                    ForEach(AppLanguage.localizedLanguages, id: \.rawValue) { language in
+                        Text(language.displayName).tag(language)
+                    }
                 }
             }
             Section(L10n.text("Permissions")) {
@@ -112,6 +113,9 @@ struct SettingsView: View {
         }
         .formStyle(.grouped)
         .environment(\.locale, L10n.currentLocale)
+        // Recreate cached picker options and child accessibility labels when
+        // switching explicit language bundles without restarting the app.
+        .id(settings.language)
         .padding(8)
         .frame(width: 520, height: 740)
         .onAppear { loginItem.refresh() }

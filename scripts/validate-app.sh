@@ -28,12 +28,14 @@ require(identifier == expected, f'unexpected bundle ID {identifier!r}')
 name = 'One Clipboard History Preview' if info.get('OCHPreviewMode') is True else 'One Clipboard History'
 require(info.get('CFBundleName') == name and info.get('CFBundleDisplayName') == name, 'incorrect app name')
 require(info.get('CFBundleExecutable') == 'OneClipboardHistory', 'incorrect executable name')
-require(info.get('CFBundleShortVersionString') == '0.8.0' and info.get('CFBundleVersion') == '8', 'incorrect release version')
+require(info.get('CFBundleShortVersionString') == '0.9.0' and info.get('CFBundleVersion') == '9', 'incorrect release version')
 require(info.get('LSUIElement') is True, 'menu bar agent flag is missing')
 require(info.get('LSMinimumSystemVersion') == '27.0', 'incorrect deployment target')
 require(info.get('LSApplicationCategoryType') == 'public.app-category.productivity', 'app category is missing')
 require(bool(info.get('NSHumanReadableCopyright')), 'copyright is missing')
 require(bool(info.get('NSPasteboardUsageDescription')), 'clipboard permission explanation is missing')
+languages = ('en', 'fr', 'es', 'it', 'ru', 'zh-Hans', 'de')
+require(set(info.get('CFBundleLocalizations', [])) == set(languages), 'supported bundle languages are incorrect')
 executable = app / 'Contents/MacOS/OneClipboardHistory'
 require(executable.is_file() and os.access(executable, os.X_OK), 'executable is missing or not executable')
 resources = app / 'Contents/Resources'
@@ -41,16 +43,18 @@ for filename in ('AppIcon.icns', 'LICENSE.txt', 'PRIVACY.txt'):
     path = resources / filename
     require(path.is_file() and path.stat().st_size > 0, f'{filename} is missing or empty')
 require('MIT License' in (resources / 'LICENSE.txt').read_text(), 'incorrect bundled license')
-for language in ('en', 'fr'):
+for language in languages:
     localized = resources / f'{language}.lproj/InfoPlist.strings'
     require(localized.is_file(), f'{language} permission localization is missing')
     subprocess.run(['plutil', '-lint', str(localized)], check=True, stdout=subprocess.PIPE)
 bundles = list(resources.glob('*_OneClipboardHistoryCore.bundle'))
 require(len(bundles) == 1, 'shared Swift package resource bundle is missing or duplicated')
-for language in ('en', 'fr'):
+for language in languages:
     # SwiftPM and Xcode use different resource bundle layouts on macOS.
     candidates = (bundles[0] / f'{language}.lproj/Localizable.strings', bundles[0] / f'Contents/Resources/{language}.lproj/Localizable.strings')
-    require(any(path.is_file() for path in candidates), f'{language} app localization is missing')
+    catalog = next((path for path in candidates if path.is_file()), None)
+    require(catalog is not None, f'{language} app localization is missing')
+    subprocess.run(['plutil', '-lint', str(catalog)], check=True, stdout=subprocess.PIPE)
 privacy = plist(resources / 'PrivacyInfo.xcprivacy')
 require(privacy.get('NSPrivacyTracking') is False, 'tracking must be disabled')
 require(privacy.get('NSPrivacyTrackingDomains') == [], 'unexpected tracking domains')
@@ -65,5 +69,5 @@ if store:
         require(entitlements.get(key) is True, f'{key} is missing from the code signature')
     require(not entitlements.get('com.apple.security.get-task-allow'), 'Release archive allows debugging')
     require(not any('temporary-exception' in key or key == 'com.apple.security.accessibility' for key in entitlements), 'unexpected sandbox exception')
-print(f'Validated {name} 0.8.0 (8), {identifier}' + (' — sandbox enabled' if store else ''))
+print(f'Validated {name} 0.9.0 (9), {identifier}' + (' — sandbox enabled' if store else ''))
 PY

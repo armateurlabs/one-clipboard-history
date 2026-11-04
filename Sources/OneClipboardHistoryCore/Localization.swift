@@ -4,6 +4,27 @@ public enum AppLanguage: String, CaseIterable, Sendable {
     case system
     case english = "en"
     case french = "fr"
+    case spanish = "es"
+    case italian = "it"
+    case russian = "ru"
+    case simplifiedChinese = "zh-Hans"
+    case german = "de"
+
+    public static let localizedLanguages = allCases.filter { $0 != .system }
+
+    /// Endonyms keep the language selector recognizable after any language change.
+    public var displayName: String {
+        switch self {
+        case .system: L10n.text("System language")
+        case .english: "English"
+        case .french: "Français"
+        case .spanish: "Español"
+        case .italian: "Italiano"
+        case .russian: "Русский"
+        case .simplifiedChinese: "简体中文"
+        case .german: "Deutsch"
+        }
+    }
 }
 
 /// App-owned strings use explicit language bundles, so choosing a language does
@@ -42,7 +63,9 @@ public enum L10n {
 
     static func resolvedLanguageIdentifier(for language: AppLanguage, preferredLanguages: [String]) -> String {
         guard language == .system else { return language.rawValue }
-        return Bundle.preferredLocalizations(from: ["en", "fr"], forPreferences: preferredLanguages).first ?? "en"
+        return Bundle.preferredLocalizations(
+            from: AppLanguage.localizedLanguages.map(\.rawValue), forPreferences: preferredLanguages
+        ).first ?? "en"
     }
 
     private static func identifier(for language: AppLanguage) -> String {
@@ -50,21 +73,23 @@ public enum L10n {
     }
 
     private static func bundle(for language: AppLanguage) -> Bundle {
-        switch identifier(for: language) {
-        case "fr": state.frenchBundle
-        default: state.englishBundle
-        }
+        state.bundles[identifier(for: language)] ?? state.englishBundle
     }
 
     private final class LanguageState: @unchecked Sendable {
         private let lock = NSLock()
         private var value: AppLanguage = .system
         let englishBundle: Bundle
-        let frenchBundle: Bundle
+        let bundles: [String: Bundle]
 
         init() {
-            englishBundle = Bundle.module.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:)) ?? .module
-            frenchBundle = Bundle.module.path(forResource: "fr", ofType: "lproj").flatMap(Bundle.init(path:)) ?? .module
+            let fallback = Bundle.module.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:)) ?? .module
+            englishBundle = fallback
+            bundles = Dictionary(uniqueKeysWithValues: AppLanguage.localizedLanguages.map { language in
+                let bundle = Bundle.module.path(forResource: language.rawValue, ofType: "lproj")
+                    .flatMap(Bundle.init(path:)) ?? fallback
+                return (language.rawValue, bundle)
+            })
         }
 
         var language: AppLanguage {

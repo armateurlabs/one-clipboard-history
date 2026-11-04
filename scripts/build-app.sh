@@ -27,8 +27,9 @@ mkdir -p "$OCH_APP/Contents/MacOS" "$OCH_APP/Contents/Resources"
 cp "$OCH_BIN/OneClipboardHistory" "$OCH_APP/Contents/MacOS/OneClipboardHistory"
 cp Resources/Info.plist "$OCH_APP/Contents/Info.plist"
 ditto "$OCH_RESOURCES" "$OCH_APP/Contents/Resources/$(basename "$OCH_RESOURCES")"
-ditto Resources/en.lproj "$OCH_APP/Contents/Resources/en.lproj"
-ditto Resources/fr.lproj "$OCH_APP/Contents/Resources/fr.lproj"
+for OCH_LOCALIZATION in Resources/*.lproj; do
+    ditto "$OCH_LOCALIZATION" "$OCH_APP/Contents/Resources/$(basename "$OCH_LOCALIZATION")"
+done
 cp LICENSE "$OCH_APP/Contents/Resources/LICENSE.txt"
 cp PRIVACY.md "$OCH_APP/Contents/Resources/PRIVACY.txt"
 cp AppStore/PrivacyInfo.xcprivacy "$OCH_APP/Contents/Resources/PrivacyInfo.xcprivacy"

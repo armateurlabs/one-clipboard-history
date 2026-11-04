@@ -56,7 +56,7 @@ struct SettingsTests {
         settings.hideAfterPasting = false
         settings.positionAtPointer = true
         settings.persistenceEnabled = true
-        settings.shortcut = .init(keyCode: 49, modifiers: UInt32(controlKey | optionKey), keyLabel: "Espace")
+        settings.shortcut = .init(keyCode: 49, modifiers: UInt32(controlKey | optionKey), keyLabel: "Space")
         let frame = NSRect(x: 100, y: 80, width: 520, height: 640)
         settings.savedFrame = frame
         let reloaded = AppSettings(defaults: defaults)
@@ -128,6 +128,20 @@ struct SettingsTests {
         #expect(defaults.double(forKey: "historyFontSize") == 22)
         #expect(defaults.bool(forKey: "animationsEnabled"))
         #expect(defaults.string(forKey: "language") == "fr")
+    }
+
+    @Test func everySupportedLanguagePersistsWithoutChangingClipboardPreferences() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        for language in AppLanguage.allCases {
+            settings.language = language
+            let reloaded = AppSettings(defaults: defaults)
+            #expect(reloaded.language == language)
+            #expect(reloaded.historyLimit == 20)
+            #expect(reloaded.historyDensity == .compact)
+            #expect(!reloaded.persistenceEnabled)
+        }
     }
 
     @Test func fontSizeIsNormalizedOnLoadAndLiveAssignment() {

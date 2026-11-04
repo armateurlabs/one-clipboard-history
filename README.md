@@ -1,60 +1,66 @@
 # One Clipboard History
 
-Un historique du presse-papiers natif pour **macOS 27 sur Apple Silicon**, écrit en Swift avec AppKit et des réglages SwiftUI. Inspiré de la rapidité de l’historique de Quicksilver : **⌥A → un chiffre → coller**.
+A native clipboard history for **macOS 27 on Apple Silicon**, built with Swift, AppKit and SwiftUI settings. Inspired by Quicksilver’s fast workflow: **⌥A → a number → paste**.
 
-[English](README.en.md) · [Téléchargements](https://github.com/armateurlabs/one-clipboard-history/releases) · [Licence MIT](LICENSE) · [Confidentialité](PRIVACY.md)
+[Downloads](https://github.com/armateurlabs/one-clipboard-history/releases) · [MIT license](LICENSE) · [Privacy](PRIVACY.md)
 
-| Mode normal, clair | Mode normal, sombre |
+| Normal mode, light | Normal mode, dark |
 | --- | --- |
-| ![Historique normal en apparence claire, avec texte, code, image et fichiers de démonstration](docs/screenshots/history-light.png) | ![Le même historique en apparence sombre native](docs/screenshots/history-dark.png) |
+| ![Normal clipboard history with synthetic text, code, image and file entries](docs/screenshots/history-light.png) | ![The same history using the native dark appearance](docs/screenshots/history-dark.png) |
 
-Les captures montrent l’application réelle avec des données synthétiques, sans contenu personnel.
+Screenshots show the real application with synthetic examples, never personal clipboard contents.
 
-## Utilisation
+## Use
 
-1. Copier du texte, du contenu enrichi, une image ou des fichiers normalement.
-2. Appuyer sur **⌥A** pour afficher ou masquer l’historique.
-3. Appuyer sur **1 à 9** pour coller l’entrée correspondante dans l’application précédente.
+1. Copy text, rich content, an image or files as usual.
+2. Press **⌥A** to show or hide history.
+3. Press **1–9** to paste that entry into the previously active app.
 
-Les flèches sélectionnent une ligne ; **Entrée** ou un double-clic colle la sélection ; **Échap** masque la fenêtre. L’engrenage et **⌘,** ouvrent les réglages. Le raccourci est configurable, y compris pour éviter un conflit avec Quicksilver.
+Arrow keys select an entry; **Return** or a double-click pastes it; **Escape** hides the window. Use the gear or **⌘,** for settings. The shortcut is configurable, including to avoid a conflict with Quicksilver.
 
-- Dernière copie au rang 1 ; les doublons strictement identiques remontent en tête. Les mises en forme différentes restent distinctes.
-- Texte pur, HTML, RTF, images, références de fichiers et représentations privées disponibles sont conservés sans normaliser leurs octets. Miniatures et résumés sont séparés des originaux.
-- **20 entrées**, **256 Mio**, police **12 points**, mode compact et tailles affichées par défaut.
-- Trois densités : **compact** sur une ligne sans aperçu ni icône, avec numéro à hauteur du texte ; **normal** avec aperçu et deux lignes ajustées au contenu ; **large** avec davantage d’espace. La police reste identique dans les trois modes. Les détails restent accessibles au survol et aux technologies d’assistance en mode compact.
-- Fenêtre instantanée, sans fondu par défaut ; animations facultatives. Largeur minimale de 280 points.
-- Position fixe mémorisée ou ouverture au pointeur, avec choix de quatre quadrants ; bas à droite par défaut. Déplacer la fenêtre la fixe à son nouvel emplacement.
-- Mode sombre **activé / désactivé / automatique**, français/anglais avec changement de langue immédiat, police réglable de 10 à 28 points.
-- Persistance et lancement silencieux à l’ouverture de session **désactivés par défaut**.
+- Newest copy first. Exact duplicates move to the top; different formatting stays distinct.
+- Preserve the bytes of plain text, HTML, RTF, images, file references and available private representations. Thumbnails and summaries never replace original data.
+- Defaults: **20 entries**, **256 MiB**, **12 pt**, compact mode and sizes visible.
+- Three densities: **compact** uses one line without previews or icons, with a rank block matching the text height; **normal** fits a preview and two text lines; **large** adds spacing. Font size stays the same across all three modes. Compact mode keeps details in tooltips and accessibility labels.
+- Instant window display with no fade by default; optional native animations. Minimum width: 280 points.
+- Remember a fixed position or open by the pointer in one of four quadrants; bottom right by default. Moving the window pins its location.
+- Dark mode **on / off / automatic**, live English, French, Spanish, Italian, Russian, Simplified Chinese and German localization, adjustable 10–28 pt text.
+- Persistence and silent launch at login are **off by default**.
 
-Les installations existantes conservent leur disposition : l’ancienne vue compacte devient **normal**, l’ancienne vue espacée devient **large**. Le choix des aperçus reste mémorisé lorsqu’on utilise le mode compact.
+Existing installations keep their layout: the previous compact view becomes **normal**, while the previous roomy view becomes **large**. The preview preference is remembered while using compact mode.
 
-![Réglages natifs de One Clipboard History](docs/screenshots/settings.png)
+![Native One Clipboard History settings](docs/screenshots/settings.png)
 
-## Installation
+## Languages
 
-Télécharger le ZIP depuis [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), l’extraire et placer **One Clipboard History.app** dans Applications. Quitter l’ancienne application avant de la remplacer.
+The interface supports **English, French, Spanish, Italian, Russian, Simplified Chinese and German**. Choose **System language** or a specific language in Settings → Appearance → Language; changes apply immediately. Languages appear under their native names so the selector remains recognizable in any interface language.
 
-**État de la version 0.8.0 :** la version personnelle est signée localement (ad hoc). La signature Developer ID et la notarisation nécessitent un certificat Apple ; un build local n’est pas une distribution validée par Gatekeeper. Le projet prépare une variante Mac App Store, sans annoncer sa disponibilité sur le Store. Voir le [dossier de préparation](docs/APP_STORE.md) et les [preuves de validation](docs/VALIDATION.md).
+System language follows the first supported macOS language preference and falls back to English. Chinese support currently uses Simplified Chinese (`zh-Hans`); Traditional Chinese is not included. Only app-owned labels and messages are translated. Copied text, formatting, file names and source app names stay unchanged. Native macOS permission dialogs follow the system language.
 
-L’application démarre dans la barre de menus. Fermer la fenêtre laisse la capture active ; **Quitter One Clipboard History** l’arrête. Dans Réglages → Général, l’option de lancement à la connexion reste silencieuse et respecte les changements effectués dans macOS.
+## Install
 
-## Permissions et confidentialité
+Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-- Autoriser l’accès au presse-papiers quand macOS le demande. Au lancement en arrière-plan, les demandes de permission attendent une interaction explicite.
-- Autoriser l’envoi de raccourcis dans les réglages de confidentialité macOS pour le collage automatique. Si l’autorisation manque, l’entrée est recopiée et reste collable manuellement avec **⌘V**.
-- Les fichiers du Finder restent des **références aux originaux**. Leur existence et leur accessibilité sont vérifiées ; ils ne sont pas archivés avec l’historique.
-- Aucun compte, publicité, télémétrie ou envoi du contenu du presse-papiers. Les liens GitHub ne s’ouvrent que sur action explicite.
+**Version 0.9.0 status:** the personal build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; a local build is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
 
-Sans persistance, l’historique reste en mémoire et disparaît à la fermeture. Son activation sauvegarde les copies localement ; sa désactivation supprime la sauvegarde en conservant la session mémoire. Le stockage n’est pas chiffré par l’application. « Effacer l’historique » ne supprime jamais les fichiers originaux.
+The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 
-Pour conserver les réglages des premières versions, la distribution directe utilise toujours l’identifiant `com.arthur.mcm` et `~/Library/Application Support/mcm/History/`. La variante sandboxée possède son propre conteneur et propose un import explicite d’un ancien dossier History, sans modifier la source.
+## Permissions and privacy
 
-Lire la [politique de confidentialité complète](PRIVACY.md), également accessible dans À propos.
+- Allow clipboard access when macOS asks. Background startup defers permission prompts until an explicit interaction.
+- Allow event posting in macOS privacy settings for automatic paste. If denied, an entry is still copied and can be pasted manually with **⌘V**.
+- Finder files remain **references to originals**, not independent archives. Availability and access are checked before pasting.
+- No account, advertisements, analytics or transmission of clipboard content. GitHub links open only when you choose them.
 
-## Compiler
+History stays in memory and disappears when the app exits unless persistence is enabled. Enabling persistence saves locally; disabling it deletes the saved history while retaining the current in-memory session. Storage is not encrypted by the app. Clearing history never deletes referenced original files.
 
-Prérequis : macOS 27, Apple Silicon et Xcode 27 avec ses outils de ligne de commande sélectionnés.
+For compatibility with early versions, direct distribution retains bundle identifier `com.arthur.mcm` and `~/Library/Application Support/mcm/History/`. The sandboxed variant has its own container and offers explicit import from a legacy History folder without changing the source.
+
+Read the full [privacy policy](PRIVACY.md), also available from About.
+
+## Build
+
+Requirements: macOS 27, Apple Silicon and Xcode 27 with its command-line tools selected.
 
 ```sh
 git clone https://github.com/armateurlabs/one-clipboard-history.git
@@ -64,7 +70,7 @@ swift test
 open 'build/One Clipboard History.app'
 ```
 
-Le script génère une icône originale et un bundle signé localement, avec ses traductions, sa licence et sa politique de confidentialité. Une identité disponible dans le trousseau peut être fournie avec `OCH_SIGN_IDENTITY` (l’ancien `MCM_SIGN_IDENTITY` reste accepté).
+The build script generates original icon artwork and a locally signed app with translations, license and privacy policy. Set `OCH_SIGN_IDENTITY` to use a signing identity in your keychain; the legacy `MCM_SIGN_IDENTITY` variable is also accepted.
 
 ```sh
 ./scripts/validate-app.sh 'build/One Clipboard History.app'
@@ -72,22 +78,24 @@ Le script génère une icône originale et un bundle signé localement, avec ses
 open 'build/One Clipboard History Preview.app'
 ```
 
-L’aperçu utilise un presse-papiers privé, des préférences distinctes et un service de lancement simulé. Il permet de photographier et d’examiner l’interface sans capturer l’historique réel.
+The preview uses a private pasteboard, separate preferences and a simulated login service. It supports examining and photographing the interface without capturing real history.
 
-La cible Xcode **OneClipboardHistory Store** prépare le sandbox et l’archivage. Les commandes, exigences de signature et résultats de faisabilité sont décrits dans [APP_STORE.md](docs/APP_STORE.md).
+The **OneClipboardHistory Store** Xcode target prepares sandboxing and archiving. See [APP_STORE.md](docs/APP_STORE.md) for commands, signing requirements and feasibility results.
 
-## Fidélité, performances et limites
+## Fidelity, performance and limitations
 
-La capture lit le presse-papiers toutes les **200 ms**, sur une file dédiée. Les copies intermédiaires remplacées entre deux lectures peuvent échapper à l’historique. Les formats différés sont matérialisés pendant la capture ; une entrée incomplète est signalée et son collage est bloqué. L’éviction concerne des entrées entières, jamais certains formats d’une copie.
+Capture polls every **200 ms** on a dedicated queue. Intermediate copies replaced between polls may be missed. Deferred formats are materialized during capture; incomplete entries are identified and cannot be pasted. Budget eviction removes whole entries, never selected formats within an entry.
 
-La restitution recrée des objets AppKit indépendants. Les formats privés de Word et Excel peuvent dépendre de l’application source : les tests d’octets ne prouvent pas à eux seuls la fidélité fonctionnelle d’Office. Les scénarios vérifiés et restant à effectuer sont documentés dans [VALIDATION.md](docs/VALIDATION.md).
+Restoration creates independent AppKit objects. Private Word and Excel formats may depend on their source application; byte-fidelity tests alone do not establish full Office paste fidelity. [VALIDATION.md](docs/VALIDATION.md) distinguishes verified results from remaining scenarios.
 
-**Limite Excel constatée :** une ancienne copie peut coller les valeurs calculées à la place des formules, même lorsque tous ses formats et octets sont conservés. Les entrées concernées portent une indication et demandent confirmation avant leur restauration. Si la copie est toujours intacte dans le presse-papiers, l’application conserve son propriétaire et le comportement du collage direct. Aucun format original n’est retiré pour contourner cette limite.
+**Observed Excel limitation:** an older copy can paste calculated values instead of formulas even when all format bytes are preserved. Affected entries display a note and require confirmation before restoration. If the copy is still unchanged on the clipboard, the app keeps its owner and native paste behavior. Original formats are never removed as a workaround.
 
-Aucun quota CPU n’est imposé. L’objectif d’ouverture à chaud est un 95e percentile sous 50 ms ; les mesures précisent ce qui a effectivement été chronométré. Le mode `--measure` ne journalise que des durées, jamais le contenu copié.
+No CPU quota is imposed. The target is warm opening below 50 ms at the 95th percentile; measurements document exactly what was timed. The `--measure` mode logs durations only, never clipboard contents.
 
-## Contribuer
+## Contribute
 
-Ouvrir une [issue](https://github.com/armateurlabs/one-clipboard-history/issues) avec la version de macOS, la version de l’application et des étapes reproductibles. Utiliser des exemples synthétiques : ne pas publier de secrets ou d’historique personnel. Exécuter `swift test` et les vérifications du bundle avant de proposer un changement.
+English is the working language for code, documentation, issues and commit messages. App translations and multilingual test fixtures keep their own languages.
 
-Copyright © 2026 **Armateur Labs**. Distribué sous [licence MIT](LICENSE).
+Open an [issue](https://github.com/armateurlabs/one-clipboard-history/issues) with your macOS version, app version and reproduction steps. Use synthetic examples; do not publish secrets or personal history. Run `swift test` and bundle validation before proposing changes.
+
+Copyright © 2026 **Armateur Labs**. Released under the [MIT license](LICENSE).

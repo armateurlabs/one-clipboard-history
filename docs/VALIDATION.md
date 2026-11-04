@@ -1,61 +1,73 @@
-# Validation de One Clipboard History 0.8.0 — 4 novembre 2026
+# One Clipboard History 0.9.0 validation — 4 November 2026
 
-Version **0.8.0 (8)**, macOS 27 sur Apple Silicon. Cette mise à jour ajoute les
-trois modes de densité et conserve les données du presse-papiers sans changement.
-Les contrôles de formats, sandbox, import, permissions et limites Office de la
-version précédente restent documentés dans [VALIDATION-0.7.md](VALIDATION-0.7.md).
+Version **0.9.0 (9)**, macOS 27 on Apple Silicon. This update makes English the
+project's working language and adds Spanish, Italian, Russian, Simplified Chinese
+and German to the existing English and French interface.
 
-## Contrôles exécutés
+## Automated checks
 
-`swift test` : **137 tests réussis**, dont **78 Core** et **59 AppKit/réglages**.
+`swift test`: **139 tests passed**, comprising **79 Core** and **60 AppKit/settings**.
 
-Les contrôles de densité vérifient :
+Localization checks cover all seven catalogs: identical sets of 163 keys,
+nonempty translations, unchanged printf argument signatures and order, preserved
+newlines, complete literal app/status coverage, and actual resource-bundle loading.
+Formatting tests retain Unicode source application names and other arguments.
 
-- Compact par défaut pour une nouvelle installation ; migration de l’ancienne
-  préférence compacte vers Normal, et de l’ancienne vue espacée vers Large.
-- Persistance des trois choix, repli sûr d’une valeur invalide, notifications
-  de réglages et conservation des préférences de police, aperçu et taille.
-- Une ligne en Compact avec taille facultative, aucun aperçu ni icône ; bloc
-  du numéro de même hauteur que le texte pour les polices de 10 à 28 points.
-- Métadonnées conservées dans le tooltip et le libellé d’accessibilité.
-- Normal et Large conservant la taille des polices et des images d’aperçu.
-- Cellules réutilisées après plusieurs changements de mode, retour des aperçus
-  et métadonnées, sélection conservée et collage par Entrée sur le même élément.
+System language resolution covers regional preferences including `es-MX`,
+`it-CH`, `ru-RU`, `de-AT`, `zh-CN` and `zh-SG`, plus English fallback. Chinese
+support is explicitly Simplified Chinese (`zh-Hans`); Traditional Chinese is
+not advertised or selected as a translated script. Every language setting
+survives preferences reload without changing history limits, density or persistence.
 
-Dans l’application d’aperçu réelle, les changements Compact → Normal → Large →
-Compact ont été effectués avec les huit entrées synthétiques : images et icônes
-absentes en Compact, rétablies dans les autres modes. Le sélecteur affiche les
-trois choix ; l’option d’aperçu est désactivée en Compact sans effacer sa valeur.
-La capture `docs/screenshots/settings.png` montre les nouveaux réglages réels,
-sans contenu personnel. Les deux captures d’historique existantes montrent le
-mode désormais nommé Normal.
+Both app variants declare seven bundle localizations. The direct packaging script
+copies all permission catalogs; the Xcode resource variant group includes all
+seven. Bundle validation checks every permission and app catalog and lints each
+packaged strings file.
 
-Le mode Compact évite aussi de générer les miniatures en arrière-plan. Le cache
-et les tâches d’enrichissement sont invalidés lorsque leur nécessité change.
-Les octets originaux et les alertes de capture incomplète ou de contexte Excel
-ne sont pas modifiés par le choix d’affichage.
+## Real application checks
 
-## Compilation et livraison
+The preview app was switched through Spanish, Italian, Russian, Simplified
+Chinese, German, French and English without restarting. Settings titles,
+headings, appearance controls, density options and language selectors were
+inspected in the accessibility tree. Russian and Chinese settings were also
+inspected visually. Language names use endonyms so the selector remains
+recognizable after switching.
 
-Le bundle release et l’aperçu sont compilés et vérifiés par
-`scripts/validate-app.sh`. La CI [macOS 27 / Apple Silicon](https://github.com/armateurlabs/one-clipboard-history/actions/workflows/ci.yml)
-exécute les tests, la compilation release et l’archivage de la cible sandboxée.
-Les résultats datés sont disponibles dans ses exécutions.
+The first visual pass found that cached SwiftUI picker options retained their
+previous language. Recreating the settings form on language changes fixed this;
+the repeated pass confirmed translated density options in Spanish, Italian,
+Russian, Chinese and German.
 
-Le bundle direct est installé dans `/Applications/One Clipboard History.app`.
-Il conserve `com.arthur.mcm`, les préférences et l’emplacement des sauvegardes.
-La copie précédente est archivée localement sous `build/InstallBackups/`.
-Le ZIP de préversion utilise une signature ad hoc ; les préalables de signature
-Apple et de notarisation demeurent inchangés.
+In Chinese history, app-owned type labels and comments changed while synthetic
+English clipboard text, Python code, file names and source app names stayed
+unchanged. These checks used an isolated preview clipboard and preferences;
+personal clipboard data was not published.
 
-## Limites et recettes restantes
+## English project and delivery
 
-Les scénarios restant à qualifier dans [la recette 0.7.0](VALIDATION-0.7.md)
-restent ouverts : permissions accordées et focus physique, raccourci global sur
-clavier réel, VoiceOver complet, Office complexe, ouverture de session,
-veille/réveil, écrans et Spaces. La dépendance de certaines formules Excel à
-leur contexte source reste protégée par un avertissement.
+The canonical README, Store preparation dossier, privacy policy and historical
+validation reports are in English. Existing English documentation was promoted
+to canonical paths; obsolete duplicate files were removed. Project language
+conventions are recorded in `AGENTS.md`. App localization resources and
+multilingual test fixtures remain in their target languages.
 
-La mesure d’ouverture précédente concerne le mode désormais nommé Normal ; le
-benchmark optionnel le sélectionne explicitement pour conserver sa comparabilité.
-Aucun nouveau résultat temporel ni plafond CPU n’est introduit dans cette version.
+The direct release and preview bundles are built and verified by
+`scripts/validate-app.sh`. The [macOS 27 / Apple Silicon CI](https://github.com/armateurlabs/one-clipboard-history/actions/workflows/ci.yml)
+also runs tests, release compilation, bundle checks and sandboxed archiving.
+The direct app retains `com.arthur.mcm`, existing preferences and history storage.
+Version 0.9.0 is installed at `/Applications/One Clipboard History.app`; the
+previous bundle is archived under `build/InstallBackups/`. The release ZIP was
+extracted into a fresh directory and passed the same bundle validation.
+
+## Remaining qualification
+
+These are complete initial translations, with automated catalog validation and
+live UI inspection; independent native-speaker review and full VoiceOver
+navigation in every language remain useful follow-up checks. No new timing
+claim or CPU ceiling is introduced.
+
+Format fidelity, Excel's source-context limitation, permission/focus scenarios,
+Apple signing and notarization prerequisites remain documented in
+[0.7.0 validation](VALIDATION-0.7.md) and [Store preparation](APP_STORE.md).
+Density behavior and its earlier checks are preserved in
+[0.8.0 validation](VALIDATION-0.8.md).

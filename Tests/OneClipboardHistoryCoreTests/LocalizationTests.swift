@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import OneClipboardHistoryCore
 
-@Suite("English and French localization")
+@Suite("Multilingual localization")
 struct LocalizationTests {
     @Test func explicitLanguagesHaveIndependentTranslations() {
         #expect(L10n.text("One Clipboard History", language: .english) == "One Clipboard History")
@@ -28,41 +28,69 @@ struct LocalizationTests {
     @Test func systemLanguageResolvesSupportedVariantsAndFallsBackToEnglish() {
         #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["fr-CA", "en-US"]) == "fr")
         #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["en-GB", "fr"]) == "en")
-        #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["de-DE", "fr-FR"]) == "fr")
+        #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["de-DE", "fr-FR"]) == "de")
+        for (variant, expected) in [("es-MX", "es"), ("it-CH", "it"), ("ru-RU", "ru"),
+                                    ("de-AT", "de"), ("zh-CN", "zh-Hans"), ("zh-SG", "zh-Hans")] {
+            #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: [variant]) == expected)
+        }
+        // Traditional Chinese is not advertised as a translated script.
+        #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["zh-Hant"]) == "en")
         #expect(L10n.resolvedLanguageIdentifier(for: .system, preferredLanguages: ["ja-JP"]) == "en")
         #expect(L10n.resolvedLanguageIdentifier(for: .french, preferredLanguages: ["en-US"]) == "fr")
         #expect(L10n.locale(for: .english).language.languageCode?.identifier == "en")
         #expect(L10n.locale(for: .french).language.languageCode?.identifier == "fr")
     }
 
+    @Test func everySupportedLanguageLoadsItsOwnBundleAndKeepsSourceArguments() {
+        #expect(Set(AppLanguage.localizedLanguages.map(\.rawValue)) == ["en", "fr", "es", "it", "ru", "zh-Hans", "de"])
+        for language in AppLanguage.localizedLanguages {
+            #expect(L10n.resolvedLanguageIdentifier(for: language, preferredLanguages: ["ja-JP"]) == language.rawValue)
+            #expect(!language.displayName.isEmpty)
+            #expect(L10n.text("One Clipboard History", language: language) == "One Clipboard History")
+            let settings = L10n.text("Settings", language: language)
+            #expect(!settings.isEmpty)
+            if language != .english { #expect(settings != "Settings") }
+            let source = "Word — αβ 🐍"
+            #expect(L10n.format("Copied from %@", language: language, arguments: [source]).contains(source))
+            #expect(L10n.format("%ld files · %@", language: language, arguments: [2, source]).contains(source))
+            #expect(L10n.text("Unregistered source phrase", language: language) == "Unregistered source phrase")
+        }
+        #expect(AppLanguage.spanish.displayName == "Español")
+        #expect(AppLanguage.russian.displayName == "Русский")
+        #expect(AppLanguage.simplifiedChinese.displayName == "简体中文")
+    }
+
     @Test func catalogsHaveMatchingKeysAndFormatSignatures() throws {
         let english = try catalog("en")
-        let french = try catalog("fr")
         #expect(english.count >= 100)
-        #expect(Set(english.keys) == Set(french.keys))
         let expression = try NSRegularExpression(pattern: "%[@a-zA-Z]+")
-        for (key, value) in english {
-            #expect(value == key)
-            let translated = try #require(french[key])
-            #expect(!translated.isEmpty)
-            func formats(_ string: String) -> [String] {
-                expression.matches(in: string, range: NSRange(string.startIndex..., in: string)).map {
-                    String(string[Range($0.range, in: string)!])
+        for language in AppLanguage.localizedLanguages {
+            let translatedCatalog = try catalog(language.rawValue)
+            #expect(Set(english.keys) == Set(translatedCatalog.keys))
+            for (key, value) in english {
+                #expect(value == key)
+                let translated = try #require(translatedCatalog[key])
+                #expect(!translated.isEmpty)
+                func formats(_ string: String) -> [String] {
+                    expression.matches(in: string, range: NSRange(string.startIndex..., in: string)).map {
+                        String(string[Range($0.range, in: string)!])
+                    }
                 }
+                #expect(formats(value) == formats(translated), "\(language.rawValue) format mismatch for \(key)")
+                #expect(value.components(separatedBy: "\n").count == translated.components(separatedBy: "\n").count)
             }
-            #expect(formats(value) == formats(translated), "Format mismatch for \(key)")
         }
     }
 
-    @Test func everyLiteralLocalizationAndStatusKeyHasBothTranslations() throws {
+    @Test func everyLiteralLocalizationAndStatusKeyHasAllTranslations() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let sources = root.appendingPathComponent("Sources")
         let english = try catalog("en")
-        let french = try catalog("fr")
+        let translations = try AppLanguage.localizedLanguages.map { ($0.rawValue, try catalog($0.rawValue)) }
         for key in ["Preview mode: copied to a private clipboard.",
                     "Entry copied. Allow automatic paste in Settings or paste with ⌘V."] {
             #expect(english[key] != nil)
-            #expect(french[key] != nil)
+            for (language, catalog) in translations { #expect(catalog[key] != nil, "Missing \(language) key: \(key)") }
         }
         let expression = try NSRegularExpression(pattern: #"(?:L10n\.(?:text|format)\(|setStatus\(|shortcutError = )\s*"((?:[^"\\]|\\.)*)""#)
         let enumerator = try #require(FileManager.default.enumerator(at: sources, includingPropertiesForKeys: nil))
@@ -72,7 +100,7 @@ struct LocalizationTests {
                 let encoded = String(source[Range(match.range(at: 1), in: source)!])
                 let key = try JSONDecoder().decode(String.self, from: Data(("\"" + encoded + "\"").utf8))
                 #expect(english[key] != nil, "Missing English key: \(key)")
-                #expect(french[key] != nil, "Missing French key: \(key)")
+                for (language, catalog) in translations { #expect(catalog[key] != nil, "Missing \(language) key: \(key)") }
             }
         }
     }

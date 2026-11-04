@@ -21,6 +21,11 @@
 		020000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		020000000000000000000008 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		020000000000000000000009 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		02000000000000000000000A /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		02000000000000000000000B /* it */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = it; path = it.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		02000000000000000000000C /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		02000000000000000000000D /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		02000000000000000000000E /* de */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = de; path = de.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -101,7 +106,7 @@
 			buildConfigurationList = 0C0000000000000000000001 /* Build configuration list for PBXProject "OneClipboardHistory" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (en, fr, Base,);
+			knownRegions = (en, fr, es, it, ru, "zh-Hans", de, Base,);
 			mainGroup = 050000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (100000000000000000000001 /* XCLocalSwiftPackageReference "." */,);
@@ -122,7 +127,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		090000000000000000000001 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (020000000000000000000008 /* en */, 020000000000000000000009 /* fr */,); name = InfoPlist.strings; sourceTree = "<group>"; };
+		090000000000000000000001 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (020000000000000000000008 /* en */, 020000000000000000000009 /* fr */, 02000000000000000000000A /* es */, 02000000000000000000000B /* it */, 02000000000000000000000C /* ru */, 02000000000000000000000D /* zh-Hans */, 02000000000000000000000E /* de */,); name = InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXVariantGroup section */
 
 /* Begin PBXShellScriptBuildPhase section */
