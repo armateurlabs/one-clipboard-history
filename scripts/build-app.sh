@@ -20,4 +20,6 @@ else
     codesign --force --options runtime --timestamp --sign "$MCM_IDENTITY" "$MCM_APP"
 fi
 codesign --verify --strict "$MCM_APP"
+# Keep Finder's bundle modification date in sync with the rebuilt executable.
+touch "$MCM_APP"
 printf 'Built %s\n' "$MCM_APP"
