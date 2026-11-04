@@ -12,6 +12,14 @@ enum PointerQuadrant: String, CaseIterable, Sendable, Identifiable {
     var id: String { rawValue }
 }
 
+enum AppearanceMode: String, CaseIterable, Sendable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+}
+
 struct KeyboardShortcut: Codable, Equatable, Sendable {
     var keyCode: UInt32
     var modifiers: UInt32
@@ -73,6 +81,7 @@ final class AppSettings: ObservableObject {
         }
     }
     @Published var animationsEnabled: Bool { didSet { save() } }
+    @Published var appearanceMode: AppearanceMode { didSet { save() } }
     @Published var language: AppLanguage { didSet { save() } }
     @Published var shortcut: KeyboardShortcut { didSet { save() } }
     @Published var shortcutError: String?
@@ -88,7 +97,8 @@ final class AppSettings: ObservableObject {
             "showSizes": true, "compactView": true, "hideAfterPasting": true, "positionAtPointer": false,
             "persistenceEnabled": false, "historyFontSize": 12.0,
             "pointerQuadrant": PointerQuadrant.bottomRight.rawValue,
-            "animationsEnabled": false, "language": AppLanguage.system.rawValue
+            "animationsEnabled": false, "appearanceMode": AppearanceMode.system.rawValue,
+            "language": AppLanguage.system.rawValue
         ])
         historyLimit = max(1, min(defaults.integer(forKey: "historyLimit"), 1_000_000))
         budgetMegabytes = max(1, min(defaults.integer(forKey: "budgetMegabytes"), 1_048_576))
@@ -101,6 +111,7 @@ final class AppSettings: ObservableObject {
         persistenceEnabled = defaults.bool(forKey: "persistenceEnabled")
         historyFontSize = Self.normalizedFontSize(defaults.double(forKey: "historyFontSize"))
         animationsEnabled = defaults.bool(forKey: "animationsEnabled")
+        appearanceMode = defaults.string(forKey: "appearanceMode").flatMap(AppearanceMode.init(rawValue:)) ?? .system
         language = defaults.string(forKey: "language").flatMap(AppLanguage.init(rawValue:)) ?? .system
         shortcut = defaults.data(forKey: "shortcut").flatMap { try? JSONDecoder().decode(KeyboardShortcut.self, from: $0) } ?? .initial
     }
@@ -117,6 +128,7 @@ final class AppSettings: ObservableObject {
         defaults.set(persistenceEnabled, forKey: "persistenceEnabled")
         defaults.set(Self.normalizedFontSize(historyFontSize), forKey: "historyFontSize")
         defaults.set(animationsEnabled, forKey: "animationsEnabled")
+        defaults.set(appearanceMode.rawValue, forKey: "appearanceMode")
         defaults.set(language.rawValue, forKey: "language")
         defaults.set(try? JSONEncoder().encode(shortcut), forKey: "shortcut")
         onChange?()

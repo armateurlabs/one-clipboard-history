@@ -114,4 +114,8 @@
 "Bottom left" = "Bottom left";
 "Bottom right" = "Bottom right";
 "Compact view" = "Compact view";
+"Dark mode" = "Dark mode";
+"Automatic (system)" = "Automatic (system)";
+"Enabled" = "Enabled";
+"Disabled" = "Disabled";
 "Fit rows to their content without changing text or preview size." = "Fit rows to their content without changing text or preview size.";

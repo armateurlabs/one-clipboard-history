@@ -36,6 +36,7 @@ struct SettingsTests {
         #expect(!settings.persistenceEnabled)
         #expect(settings.historyFontSize == 12)
         #expect(!settings.animationsEnabled)
+        #expect(settings.appearanceMode == .system)
         #expect(settings.language == .system)
         #expect(settings.shortcut.label == "⌥A")
         #expect(settings.shortcut.modifiers == UInt32(optionKey))
@@ -218,5 +219,41 @@ struct SettingsTests {
             #expect(!reloaded.showPreviews)
         }
         #expect(changes == 2)
+    }
+
+    @Test func appearanceModesPersistAndNotifyWithoutChangingOtherPreferences() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(22.0, forKey: "historyFontSize")
+        defaults.set(false, forKey: "compactView")
+        defaults.set(false, forKey: "showPreviews")
+        defaults.set(false, forKey: "hideAfterPasting")
+        let settings = AppSettings(defaults: defaults)
+        var changes = 0
+        settings.onChange = { changes += 1 }
+
+        for mode in [AppearanceMode.dark, .light, .system] {
+            settings.appearanceMode = mode
+            let reloaded = AppSettings(defaults: defaults)
+            #expect(reloaded.appearanceMode == mode)
+            #expect(defaults.string(forKey: "appearanceMode") == mode.rawValue)
+            #expect(reloaded.historyFontSize == 22)
+            #expect(!reloaded.compactView)
+            #expect(!reloaded.showPreviews)
+            #expect(!reloaded.hideAfterPasting)
+        }
+        #expect(changes == 3)
+        #expect(AppearanceMode.allCases.count == 3)
+    }
+
+    @Test func appearanceDefaultsToSystemForExistingOrInvalidPreferences() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(18.0, forKey: "historyFontSize")
+        #expect(AppSettings(defaults: defaults).appearanceMode == .system)
+        defaults.set("unsupported-appearance", forKey: "appearanceMode")
+        let invalid = AppSettings(defaults: defaults)
+        #expect(invalid.appearanceMode == .system)
+        #expect(invalid.historyFontSize == 18)
     }
 }

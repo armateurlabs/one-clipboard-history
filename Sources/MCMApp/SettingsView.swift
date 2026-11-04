@@ -38,6 +38,11 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(L10n.text("Appearance")) {
+                Picker(L10n.text("Dark mode"), selection: $settings.appearanceMode) {
+                    Text(L10n.text("Automatic (system)")).tag(AppearanceMode.system)
+                    Text(L10n.text("Enabled")).tag(AppearanceMode.dark)
+                    Text(L10n.text("Disabled")).tag(AppearanceMode.light)
+                }
                 Toggle(L10n.text("Compact view"), isOn: $settings.compactView)
                 Text(L10n.text("Fit rows to their content without changing text or preview size."))
                     .font(.caption).foregroundStyle(.secondary)

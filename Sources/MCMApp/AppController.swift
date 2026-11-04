@@ -45,6 +45,7 @@ final class AppController {
     init(demo: Bool) throws {
         self.demo = demo
         settings = AppSettings(defaults: demo ? UserDefaults(suiteName: "com.arthur.mcm.demo")! : .standard)
+        AppAppearance.apply(settings.appearanceMode)
         L10n.configure(settings.language)
         appliedLanguage = settings.language
         let directory = demo
@@ -334,6 +335,7 @@ final class AppController {
 
     private func settingsDidChange() {
         guard !shuttingDown else { return }
+        AppAppearance.apply(settings.appearanceMode)
         if appliedLanguage != settings.language {
             L10n.configure(settings.language)
             appliedLanguage = settings.language

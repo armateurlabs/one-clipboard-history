@@ -30,12 +30,13 @@ Le projet peut aussi être ouvert dans Xcode via `Package.swift`. L’applicatio
 - L’engrenage, le menu de mcm et **⌘,** donnent accès aux réglages. La longueur d’historique, le budget de données, le raccourci, les aperçus, les tailles et le masquage après collage sont configurables.
 - La taille de police de l’historique se règle de **10 à 28 points**, avec **12 points par défaut**. Le texte, les numéros et la hauteur des lignes s’adaptent immédiatement ; les tailles de police déjà choisies restent conservées.
 - La **vue compacte est activée par défaut** : les lignes s’ajustent au contenu avec moins de marge verticale, sans réduire la police, les icônes ou les aperçus. À 12 points, leur hauteur passe de 56 à 44 points. Désactiver cette option dans Affichage rétablit la présentation plus espacée.
+- Le réglage **Mode sombre** propose **Activé** (sombre), **Désactivé** (clair) et **Automatique (système)**, choisi par défaut. Il s’applique immédiatement à la palette et aux réglages ; le mode automatique suit les changements de macOS.
 - La fenêtre apparaît et disparaît **instantanément par défaut**, sans fondu. Le réglage des animations permet de réactiver le comportement natif de macOS.
 - L’interface est disponible en **français et en anglais**, avec la langue système par défaut. Le choix dans les réglages actualise immédiatement la fenêtre, les menus et les commentaires des entrées. Le contenu copié reste intact.
 - La position est fixe par défaut. Le mode d’ouverture au pointeur est optionnel ; un petit sélecteur carré choisit le quadrant **haut gauche, haut droite, bas gauche ou bas droite**, avec **bas droite par défaut**. La fenêtre reste dans la zone utilisable de l’écran ; déplacer la palette la fixe à son nouvel emplacement sans perdre le quadrant choisi.
 - La largeur de la palette peut descendre jusqu’à **280 points**.
 
-Les valeurs initiales sont **20 entrées**, **256 Mio de données**, police de **12 points**, vue compacte activée, aperçus et tailles affichés, persistance et animations désactivées. Les limites s’appliquent aux entrées entières : mcm ne retire pas certains formats d’une copie pour la faire tenir dans le budget.
+Les valeurs initiales sont **20 entrées**, **256 Mio de données**, police de **12 points**, vue compacte activée, apparence automatique, aperçus et tailles affichés, persistance et animations désactivées. Les limites s’appliquent aux entrées entières : mcm ne retire pas certains formats d’une copie pour la faire tenir dans le budget.
 
 ## Autorisations et conservation
 

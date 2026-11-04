@@ -1,6 +1,6 @@
 # Validation de mcm — 4 novembre 2026
 
-État de validation de la version personnelle 0.4.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **74 tests**, dont 40 sur les données, la persistance et la localisation et 34 sur AppKit, les réglages, le placement et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
+État de validation de la version personnelle 0.5.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **78 tests**, dont 40 sur les données, la persistance et la localisation et 38 sur AppKit, les réglages, le placement, l’apparence et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
 
 ## Contrôles automatisés
 
@@ -27,6 +27,7 @@ Les contrôles implémentés et exercés couvrent :
 - Vue compacte initialement activée, préférence conservée ; hauteur mesurée sur les contrôles natifs sans réduire les polices ni les dimensions des aperçus. Tests de cellules réellement mises en page à 10, 12, 24 et 28 points, avec PNG, insets verticaux, sélection et collage au clavier conservés lors de la bascule.
 - Quatre quadrants autour du pointeur, bas à droite par défaut, écart de 12 points, limites de l’écran, écrans à origine négative et sauvegarde du quadrant lors du passage en position fixe.
 - Animations désactivées par défaut, activables puis désactivables, sans transparence résiduelle.
+- Mode sombre activé/désactivé/automatique persistant ; la palette et les vrais réglages SwiftUI héritent immédiatement de l’apparence. Le retour automatique supprime l’apparence forcée et suit macOS. Les tests restaurent l’apparence du processus sans modifier le système.
 - Catalogues français/anglais complets, arguments de formatage, langue système et changement de langue sans transformation des données originales.
 
 Ces fixtures ne prouvent pas que Word ou Excel interpréteront toutes leurs représentations privées exactement comme lors d’un collage direct.
@@ -40,6 +41,8 @@ Pour la version 0.2.0, le passage en direct de la langue système à français p
 Pour la version 0.3.0, le sélecteur carré a été vérifié visuellement : quatre boutons autour du curseur, bas à droite sélectionné initialement, boutons désactivés en position fixe puis activés en mode pointeur. Le choix haut gauche puis le retour bas droite ont été contrôlés. La police de l’aperçu a été mise à 12 points ; le mode fixe et le quadrant bas droite ont été restaurés après vérification.
 
 Pour la version 0.4.0, les lignes compactes ont été comparées visuellement à la présentation espacée : mêmes textes et icônes, marges verticales réduites. Le réglage Vue compacte a été vérifié initialement activé, désactivé puis réactivé en direct ; l’aperçu conserve le mode compact à la fin du contrôle.
+
+Pour la version 0.5.0, le mode sombre a été activé visuellement dans l’aperçu : fond, contrôles, titres, sélection et numéros de l’historique restent lisibles. Le passage au mode clair a été vérifié dans les réglages, puis le choix automatique a été restauré. Aucun réglage d’apparence global de macOS n’a été modifié.
 
 Deux fixtures de fournisseurs différés internes au processus de test produisent un avertissement AppKit d’affinité de thread. Le fournisseur différé testé dans un processus distinct remplit sa promesse sur son propre fil principal, sans cet avertissement ; la récupération des octets et la gestion d’une exception sont vérifiées.
 

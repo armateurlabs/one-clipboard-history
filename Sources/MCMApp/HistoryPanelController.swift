@@ -542,6 +542,11 @@ private final class NumberPillView: NSView {
     var emphasized = false { didSet { needsDisplay = true } }
     var fontSize: CGFloat = 12 { didSet { needsDisplay = true } }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
     override func draw(_ dirtyRect: NSRect) {
         let fill = emphasized ? NSColor.white.withAlphaComponent(0.14) : NSColor.quaternaryLabelColor
         fill.setFill()
