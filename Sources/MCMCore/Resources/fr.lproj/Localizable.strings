@@ -108,3 +108,8 @@
 "mcm could not start" = "mcm ne peut pas démarrer";
 "mcm entries will be removed. Original files will be kept." = "Les entrées de mcm seront supprimées. Les fichiers d’origine seront conservés.";
 "Entry copied. Allow automatic paste in Settings or paste with ⌘V." = "Entrée copiée. Autorisez le collage dans les réglages ou collez avec ⌘V.";
+"Window position around pointer" = "Position de la fenêtre autour du pointeur";
+"Top left" = "En haut à gauche";
+"Top right" = "En haut à droite";
+"Bottom left" = "En bas à gauche";
+"Bottom right" = "En bas à droite";

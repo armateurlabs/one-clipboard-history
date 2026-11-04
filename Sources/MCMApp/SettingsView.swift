@@ -26,6 +26,10 @@ struct SettingsView: View {
                 }
                 if let error = settings.shortcutError { Text(L10n.text(error)).font(.caption).foregroundStyle(.red) }
                 Toggle(L10n.text("Open at the mouse pointer"), isOn: $settings.positionAtPointer)
+                LabeledContent(L10n.text("Window position around pointer")) {
+                    PointerQuadrantPicker(selection: $settings.pointerQuadrant)
+                        .disabled(!settings.positionAtPointer)
+                }
                 Text(L10n.text("Moving the window remembers its position and turns off opening at the pointer."))
                     .font(.caption).foregroundStyle(.secondary)
                 Toggle(L10n.text("Hide after pasting"), isOn: $settings.hideAfterPasting)
@@ -62,6 +66,55 @@ struct SettingsView: View {
         .environment(\.locale, L10n.currentLocale)
         .padding(8)
         .frame(width: 520, height: 740)
+    }
+}
+
+private struct PointerQuadrantPicker: View {
+    @Binding var selection: PointerQuadrant
+
+    var body: some View {
+        ZStack {
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    quadrantButton(.topLeft, symbol: "arrow.up.left", label: L10n.text("Top left"))
+                    quadrantButton(.topRight, symbol: "arrow.up.right", label: L10n.text("Top right"))
+                }
+                HStack(spacing: 8) {
+                    quadrantButton(.bottomLeft, symbol: "arrow.down.left", label: L10n.text("Bottom left"))
+                    quadrantButton(.bottomRight, symbol: "arrow.down.right", label: L10n.text("Bottom right"))
+                }
+            }
+            Image(systemName: "cursorarrow")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 20, height: 20)
+                .background(.background, in: Circle())
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .padding(8)
+        .frame(width: 96, height: 96)
+        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 9))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.text("Window position around pointer"))
+    }
+
+    private func quadrantButton(_ quadrant: PointerQuadrant, symbol: String, label: String) -> some View {
+        Button {
+            selection = quadrant
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(selection == quadrant ? Color.white : Color.primary)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.mini)
+        .tint(selection == quadrant ? Color.accentColor : Color(nsColor: .controlColor))
+        .frame(width: 36, height: 36)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selection == quadrant ? .isSelected : [])
+        .help(label)
     }
 }
 

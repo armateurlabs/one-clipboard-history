@@ -166,7 +166,7 @@ struct HistoryPanelTests {
         let panel = HistoryPanelController()
         let rows = makeRows(1)
         let table = try #require(findTable(in: panel.window?.contentView))
-        for (requested, expected) in [(Double.nan, 14.0), (.infinity, 14.0), (-20, 10), (1000, 28)] {
+        for (requested, expected) in [(Double.nan, 12.0), (.infinity, 12.0), (-20, 10), (1000, 28)] {
             panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: requested)
             let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
             #expect(cell.textField?.font?.pointSize == CGFloat(expected))
@@ -187,5 +187,19 @@ struct HistoryPanelTests {
                      animationsEnabled: false)
         #expect(panel.window?.animationBehavior == NSWindow.AnimationBehavior.none)
         #expect(panel.window?.alphaValue == 1)
+    }
+
+    @Test func defaultFontIsTwelvePointsAndWindowCanBeNarrower() throws {
+        _ = NSApplication.shared
+        let panel = HistoryPanelController()
+        panel.update(rows: makeRows(1), showPreviews: true, showSizes: true, status: nil)
+        let window = try #require(panel.window)
+        #expect(window.minSize.width == 280)
+        window.setFrame(.init(x: 100, y: 100, width: 280, height: 640), display: false, animate: false)
+        window.contentView?.layoutSubtreeIfNeeded()
+        #expect(window.frame.width == 280)
+        let table = try #require(findTable(in: window.contentView))
+        let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
+        #expect(cell.textField?.font?.pointSize == 12)
     }
 }

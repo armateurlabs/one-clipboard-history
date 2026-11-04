@@ -3,6 +3,15 @@ import Carbon
 import Combine
 import MCMCore
 
+enum PointerQuadrant: String, CaseIterable, Sendable, Identifiable {
+    case topLeft
+    case topRight
+    case bottomLeft
+    case bottomRight
+
+    var id: String { rawValue }
+}
+
 struct KeyboardShortcut: Codable, Equatable, Sendable {
     var keyCode: UInt32
     var modifiers: UInt32
@@ -53,6 +62,7 @@ final class AppSettings: ObservableObject {
     @Published var showSizes: Bool { didSet { save() } }
     @Published var hideAfterPasting: Bool { didSet { save() } }
     @Published var positionAtPointer: Bool { didSet { save() } }
+    @Published var pointerQuadrant: PointerQuadrant { didSet { save() } }
     @Published var persistenceEnabled: Bool { didSet { save() } }
     @Published var historyFontSize: Double {
         didSet {
@@ -75,7 +85,8 @@ final class AppSettings: ObservableObject {
         defaults.register(defaults: [
             "historyLimit": 20, "budgetMegabytes": 256, "showPreviews": true,
             "showSizes": true, "hideAfterPasting": true, "positionAtPointer": false,
-            "persistenceEnabled": false, "historyFontSize": 14.0,
+            "persistenceEnabled": false, "historyFontSize": 12.0,
+            "pointerQuadrant": PointerQuadrant.bottomRight.rawValue,
             "animationsEnabled": false, "language": AppLanguage.system.rawValue
         ])
         historyLimit = max(1, min(defaults.integer(forKey: "historyLimit"), 1_000_000))
@@ -84,6 +95,7 @@ final class AppSettings: ObservableObject {
         showSizes = defaults.bool(forKey: "showSizes")
         hideAfterPasting = defaults.bool(forKey: "hideAfterPasting")
         positionAtPointer = defaults.bool(forKey: "positionAtPointer")
+        pointerQuadrant = defaults.string(forKey: "pointerQuadrant").flatMap(PointerQuadrant.init(rawValue:)) ?? .bottomRight
         persistenceEnabled = defaults.bool(forKey: "persistenceEnabled")
         historyFontSize = Self.normalizedFontSize(defaults.double(forKey: "historyFontSize"))
         animationsEnabled = defaults.bool(forKey: "animationsEnabled")
@@ -98,6 +110,7 @@ final class AppSettings: ObservableObject {
         defaults.set(showSizes, forKey: "showSizes")
         defaults.set(hideAfterPasting, forKey: "hideAfterPasting")
         defaults.set(positionAtPointer, forKey: "positionAtPointer")
+        defaults.set(pointerQuadrant.rawValue, forKey: "pointerQuadrant")
         defaults.set(persistenceEnabled, forKey: "persistenceEnabled")
         defaults.set(Self.normalizedFontSize(historyFontSize), forKey: "historyFontSize")
         defaults.set(animationsEnabled, forKey: "animationsEnabled")
@@ -107,7 +120,7 @@ final class AppSettings: ObservableObject {
     }
 
     private static func normalizedFontSize(_ value: Double) -> Double {
-        value.isFinite ? min(28, max(10, value)) : 14
+        value.isFinite ? min(28, max(10, value)) : 12
     }
 }
 

@@ -234,7 +234,7 @@ final class AppController {
         let current = NSWorkspace.shared.frontmostApplication
         pasteTarget = current?.processIdentifier == ProcessInfo.processInfo.processIdentifier ? lastExternalApplication : current
         let start = ContinuousClock.now
-        panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
+        panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
         let duration = start.duration(to: .now)
         // This records timing only: never log clipboard contents or source metadata.
         if ProcessInfo.processInfo.arguments.contains("--measure") {
@@ -284,7 +284,7 @@ final class AppController {
                     setStatus("Entry copied. Could not return to the previous app; paste with ⌘V.")
                     await promoteCopiedEntry(id: id)
                 }
-                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
+                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
                 return
             }
             // Let the target's focus transition settle before posting the shortcut.
@@ -293,19 +293,19 @@ final class AppController {
                   let down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true),
                   let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else {
                 setStatus("Paste stopped: the target app changed.")
-                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
+                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
                 return
             }
             // Restore only after activation has settled. No disk or preview work may
             // run between this final clipboard write and the synthesized paste.
             guard await copy(entry) else {
-                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
+                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
                 return
             }
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier,
                   CGPreflightPostEventAccess() else {
                 setStatus("Entry copied; paste with ⌘V.")
-                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
+                panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame, pointerQuadrant: settings.pointerQuadrant)
                 await promoteCopiedEntry(id: id)
                 return
             }

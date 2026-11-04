@@ -31,8 +31,9 @@ struct SettingsTests {
         #expect(settings.showSizes)
         #expect(settings.hideAfterPasting)
         #expect(!settings.positionAtPointer)
+        #expect(settings.pointerQuadrant == .bottomRight)
         #expect(!settings.persistenceEnabled)
-        #expect(settings.historyFontSize == 14)
+        #expect(settings.historyFontSize == 12)
         #expect(!settings.animationsEnabled)
         #expect(settings.language == .system)
         #expect(settings.shortcut.label == "⌥A")
@@ -130,8 +131,8 @@ struct SettingsTests {
     @Test func fontSizeIsNormalizedOnLoadAndLiveAssignment() {
         let (name, defaults) = isolatedDefaults()
         defer { defaults.removePersistentDomain(forName: name) }
-        for (stored, expected) in [(0.0, 10.0), (100.0, 28.0), (Double.nan, 14.0),
-                                   (Double.infinity, 14.0), (-Double.infinity, 14.0)] {
+        for (stored, expected) in [(0.0, 10.0), (100.0, 28.0), (Double.nan, 12.0),
+                                   (Double.infinity, 12.0), (-Double.infinity, 12.0)] {
             defaults.set(stored, forKey: "historyFontSize")
             let settings = AppSettings(defaults: defaults)
             #expect(settings.historyFontSize == expected)
@@ -148,5 +149,39 @@ struct SettingsTests {
         #expect(AppSettings(defaults: defaults).language == .system)
         let legacy = KeyboardShortcut(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Espace")
         #expect(legacy.label == "⌥" + L10n.text("Space"))
+    }
+
+    @Test func pointerQuadrantsPersistAndNotifyWithoutEnablingPointerMode() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        var changes = 0
+        settings.onChange = { changes += 1 }
+
+        for quadrant in PointerQuadrant.allCases {
+            settings.pointerQuadrant = quadrant
+            let reloaded = AppSettings(defaults: defaults)
+            #expect(reloaded.pointerQuadrant == quadrant)
+            #expect(defaults.string(forKey: "pointerQuadrant") == quadrant.rawValue)
+            #expect(!reloaded.positionAtPointer)
+        }
+        #expect(changes == PointerQuadrant.allCases.count)
+
+        settings.pointerQuadrant = .topLeft
+        settings.positionAtPointer = true
+        settings.positionAtPointer = false
+        #expect(settings.pointerQuadrant == .topLeft)
+        #expect(AppSettings(defaults: defaults).pointerQuadrant == .topLeft)
+    }
+
+    @Test func invalidPointerQuadrantFallsBackWithoutChangingSavedFont() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set("outside-screen", forKey: "pointerQuadrant")
+        defaults.set(22.0, forKey: "historyFontSize")
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.pointerQuadrant == .bottomRight)
+        #expect(settings.historyFontSize == 22)
     }
 }

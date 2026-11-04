@@ -108,3 +108,8 @@
 "mcm could not start" = "mcm could not start";
 "mcm entries will be removed. Original files will be kept." = "mcm entries will be removed. Original files will be kept.";
 "Entry copied. Allow automatic paste in Settings or paste with ⌘V." = "Entry copied. Allow automatic paste in Settings or paste with ⌘V.";
+"Window position around pointer" = "Window position around pointer";
+"Top left" = "Top left";
+"Top right" = "Top right";
+"Bottom left" = "Bottom left";
+"Bottom right" = "Bottom right";

@@ -20,7 +20,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     private var rows: [HistoryRow] = []
     private var showPreviews = true
     private var showSizes = true
-    private var fontSize: CGFloat = 14
+    private var fontSize: CGFloat = 12
     private var rowHeight: CGFloat = 56
     private var positioningWindow = false
     private var didPositionWindow = false
@@ -38,7 +38,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         )
         super.init(window: historyPanel)
         historyPanel.title = L10n.text("Clipboard History")
-        historyPanel.minSize = NSSize(width: 380, height: 280)
+        historyPanel.minSize = NSSize(width: 280, height: 280)
         historyPanel.isReleasedWhenClosed = false
         historyPanel.isFloatingPanel = true
         historyPanel.level = .floating
@@ -64,7 +64,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     required init?(coder: NSCoder) { nil }
 
     func update(rows newRows: [HistoryRow], showPreviews: Bool, showSizes: Bool, status: String?,
-                fontSize: Double = 14, animationsEnabled: Bool = false) {
+                fontSize: Double = 12, animationsEnabled: Bool = false) {
         let previousIndex = table.selectedRow
         let previousID = rows.indices.contains(previousIndex) ? rows[previousIndex].entry.id : nil
         rows = newRows
@@ -98,7 +98,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         table.reloadData()
     }
 
-    func show(positionAtPointer: Bool, savedFrame: NSRect?) {
+    func show(positionAtPointer: Bool, savedFrame: NSRect?, pointerQuadrant: PointerQuadrant = .bottomRight) {
         positioningWindow = true
         let screen = screenAtPointer()
         var frame = historyPanel.frame
@@ -106,8 +106,8 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
             if let savedFrame, savedFrame.width.isFinite, savedFrame.height.isFinite {
                 frame.size = savedFrame.size
             }
-            let pointer = NSEvent.mouseLocation
-            frame.origin = NSPoint(x: pointer.x + 12, y: pointer.y - frame.height - 12)
+            frame = WindowPlacement.frame(around: NSEvent.mouseLocation, size: frame.size,
+                quadrant: pointerQuadrant, visibleFrame: screen.visibleFrame, minimumSize: historyPanel.minSize)
         } else if let savedFrame, Self.isUsable(savedFrame) {
             frame = savedFrame
         } else if !didPositionWindow {
@@ -132,9 +132,9 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
 
     func hide() { historyPanel.orderOut(nil) }
 
-    func toggle(positionAtPointer: Bool, savedFrame: NSRect?) {
+    func toggle(positionAtPointer: Bool, savedFrame: NSRect?, pointerQuadrant: PointerQuadrant = .bottomRight) {
         if isVisible { hide() }
-        else { show(positionAtPointer: positionAtPointer, savedFrame: savedFrame) }
+        else { show(positionAtPointer: positionAtPointer, savedFrame: savedFrame, pointerQuadrant: pointerQuadrant) }
     }
 
     private func configureContent() {
@@ -205,7 +205,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         stack.addArrangedSubview(statusContainer)
         statusContainer.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
 
-        emptyLabel.font = .systemFont(ofSize: 14)
+        emptyLabel.font = .systemFont(ofSize: 12)
         emptyLabel.textColor = .secondaryLabelColor
         emptyLabel.alignment = .center
         emptyLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -357,13 +357,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
             return max(0, leftIntersection.width) * max(0, leftIntersection.height)
                 < max(0, rightIntersection.width) * max(0, rightIntersection.height)
         } ?? screenAtPointer()
-        let visible = screen.visibleFrame
-        var result = frame
-        result.size.width = min(max(result.width, historyPanel.minSize.width), visible.width)
-        result.size.height = min(max(result.height, historyPanel.minSize.height), visible.height)
-        result.origin.x = min(max(result.minX, visible.minX), visible.maxX - result.width)
-        result.origin.y = min(max(result.minY, visible.minY), visible.maxY - result.height)
-        return result
+        return WindowPlacement.clamp(frame, to: screen.visibleFrame, minimumSize: historyPanel.minSize)
     }
 
     private static func isUsable(_ rect: NSRect) -> Bool {
@@ -372,7 +366,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     }
 
     private static func validFontSize(_ value: Double) -> CGFloat {
-        value.isFinite ? CGFloat(min(28, max(10, value))) : 14
+        value.isFinite ? CGFloat(min(28, max(10, value))) : 12
     }
 }
 
@@ -424,7 +418,7 @@ private final class HistoryCellView: NSTableCellView {
         preview.translatesAutoresizingMaskIntoConstraints = false
         preview.imageScaling = .scaleProportionallyUpOrDown
         preview.setContentCompressionResistancePriority(.required, for: .horizontal)
-        titleLabel.font = .systemFont(ofSize: 14)
+        titleLabel.font = .systemFont(ofSize: 12)
         titleLabel.lineBreakMode = .byTruncatingMiddle
         titleLabel.usesSingleLineMode = true
         detailLabel.font = .systemFont(ofSize: 12)
@@ -434,7 +428,9 @@ private final class HistoryCellView: NSTableCellView {
         detailLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         sizeLabel.font = .systemFont(ofSize: 12)
         sizeLabel.textColor = .secondaryLabelColor
-        sizeLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        sizeLabel.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        sizeLabel.lineBreakMode = .byTruncatingTail
+        sizeLabel.usesSingleLineMode = true
         sizeLabel.setContentHuggingPriority(.required, for: .horizontal)
         let metadata = NSStackView(views: [detailLabel, sizeLabel])
         metadata.orientation = .horizontal
@@ -515,7 +511,7 @@ private final class HistoryCellView: NSTableCellView {
 private final class NumberPillView: NSView {
     var number = 1 { didSet { needsDisplay = true } }
     var emphasized = false { didSet { needsDisplay = true } }
-    var fontSize: CGFloat = 14 { didSet { needsDisplay = true } }
+    var fontSize: CGFloat = 12 { didSet { needsDisplay = true } }
 
     override func draw(_ dirtyRect: NSRect) {
         let fill = emphasized ? NSColor.white.withAlphaComponent(0.14) : NSColor.quaternaryLabelColor
