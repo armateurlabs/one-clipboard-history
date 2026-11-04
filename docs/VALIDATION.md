@@ -1,76 +1,137 @@
-# Validation de mcm — 4 novembre 2026
+# Validation de One Clipboard History — 4 novembre 2026
 
-État de validation de la version personnelle 0.6.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **93 tests**, dont 43 sur les données, la persistance, la localisation et les permissions de capture et 50 sur AppKit, les réglages, le lancement, le placement, l’apparence et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
+Version **0.7.0 (7)**, macOS 27, Apple Silicon, Xcode 27.1.
+Ce relevé distingue les contrôles exécutés des validations qui nécessitent encore
+des permissions, du matériel ou une signature de distribution. La validation
+historique de mcm 0.6.0 est conservée dans [VALIDATION-0.6.md](VALIDATION-0.6.md).
 
-## Contrôles automatisés
+## Tests automatisés
 
-Commande de vérification :
+`swift test` : **134 tests réussis**, dont **78 Core** et **56 AppKit/réglages**.
+La mesure d’ouverture est un test supplémentaire, désactivé par défaut.
+
+La suite couvre les octets et représentations multiples, l’ordre des éléments et
+des formats, la déduplication stricte, les formats différés, le Python avec
+Unicode/tabulations/CRLF, la persistance et ses corruptions, les limites par
+entrée entière, les réglages, le clavier de la palette, le placement, les
+apparences, les traductions et les événements de lancement silencieux.
+
+Les ajouts de cette version vérifient notamment :
+
+- Compatibilité des anciennes sauvegardes sans bookmarks, métadonnées d’accès
+  séparées des données originales et du contenu utilisé pour dédupliquer.
+- Refus d’accès, fichier disparu/déplacé, bookmark invalide ou périmé,
+  renouvellement et libération équilibrée des scopes de sécurité.
+- Import en lecture seule, fusion sans écrasement, rejet anticipé des limites,
+  lecture d’un seul blob à la fois, doublons, corruption, traversée de chemin,
+  rollback et nettoyage après transaction.
+- Préservation du propriétaire du presse-papiers lorsqu’ordre et octets sont
+  encore identiques, y compris face à une donnée modifiée sans nouveau compteur.
+- Refus d’une restauration Excel dépendante du contexte avant toute modification
+  du presse-papiers ; accord explicite permettant de restituer tous les formats,
+  sans retirer le marqueur OLE ni modifier les données.
+- Licence, confidentialité et liens du panneau À propos ; aperçu isolé avec
+  texte, Python, contenu enrichi, image originale et fichiers synthétiques.
+
+## Contrôles réels de l’application
+
+| Contrôle | Résultat exécuté |
+| --- | --- |
+| Compilation release directe et aperçu | Réussite ; signature locale, version, ressources, traductions, icône, licence et politique de confidentialité vérifiées. |
+| Archive Xcode Store | Archive native produite avec sandbox, lecture des fichiers sélectionnés et bookmarks applicatifs ; aucun droit d’Accessibilité ou exception temporaire. Signature ad hoc de faisabilité. |
+| Import natif sandbox | Sélection explicite du dossier de test dans NSOpenPanel, puis import de trois entrées d’ancien schéma sans bookmarks : texte Unicode, Python et copie Excel. Les quatre fichiers source restent identiques selon SHA-256. |
+| Protection Excel dans le sandbox | Entrée importée signalée, avertissement natif présenté au double-clic ; Annuler ferme l’avertissement et conserve l’historique visible sans lancer la restauration. |
+| À propos et licence | Nom, version/build, Armateur Labs, liens GitHub/MIT/confidentialité inspectés dans le panneau natif ; licence lisible dans une fenêtre locale non modifiable. |
+| Français, clair et sombre | Vérifiés dans l’application d’aperçu ; trois captures réelles dans `docs/screenshots/`, uniquement avec données synthétiques. |
+| Saisie numérique et classement | Entrée Python recopiée sur le presse-papiers privé de l’aperçu, puis retrouvée au rang 1. |
+| TextEdit | Capture d’une fixture Unicode et restitution dans un document temporaire par récupération manuelle ⌘V. |
+| Word | Texte et gras restitués via les commandes natives de copie/collage ; vérification du style d’un caractère sélectionné, pas seulement du style du curseur final. Texte simple retrouvé après fermeture du document source. |
+| Excel | Plage multicolonne, texte et gras restitués. Perte fonctionnelle des formules sur rejeu historique reproduite et protégée comme décrit ci-dessous. |
+| Retour automatique à l’application cible | Autorisation d’envoi d’événements absente pendant l’essai : message de récupération manuelle vérifié. Aucun droit macOS accordé par l’agent. |
+| Lancement à la connexion existant | Ancienne installation relevée désactivée ; aucune activation ou inscription automatique effectuée pendant la migration. |
+| Installation finale | `/Applications/One Clipboard History.app` validée et ouverte ; À propos affiche 0.7.0 (7), MIT et GitHub. L’ancien `mcm.app` est déplacé dans `build/Legacy/`, sans supprimer préférences ni données. La variante Store de test a été retirée d’Applications. |
+
+Les commandes clavier dirigées par le pilote UI ne constituent pas une preuve
+du raccourci global sur un clavier physique. Les tests Carbon vérifient le
+routage et les conflits ; la recette physique demeure distincte. De même,
+l’inspection de l’arbre d’accessibilité ne remplace pas un parcours VoiceOver.
+
+## Cas Excel reproduit
+
+Une plage synthétique contenant deux formules a été copiée depuis Excel par sa
+commande native. Le collage direct conserve les formules relatives. Après
+restauration de l’historique, Excel peut insérer leurs valeurs calculées.
+
+La comparaison porte sur **18 types canoniques**, leurs tailles, leur ordre,
+leurs empreintes SHA-256 et les alias du presse-papiers : ils sont identiques
+avant et après restitution. Le conteneur `com.microsoft.Embed-Source` contient
+bien un paquet OOXML avec **deux éléments de formule**. Aucune donnée de formule
+n’a donc été supprimée lors de la capture.
+
+Deux expériences sur cette seule fixture n’ont pas corrigé le comportement :
+publication différée à la manière de Quicksilver, et retrait expérimental du seul
+marqueur de propriétaire OLE. Ces expériences restent dans le dossier de build,
+hors du logiciel livré ; aucun format n’est supprimé en production.
+
+Le logiciel applique les protections suivantes :
+
+1. Une copie encore identique au presse-papiers courant conserve son propriétaire
+   et son contexte : aucune réécriture n’est nécessaire.
+2. La signature Excel observée est signalée dans le commentaire de l’entrée.
+3. Si une reconstitution est nécessaire, une confirmation explique que les
+   formules peuvent devenir des valeurs ; **Annuler est le choix par défaut**.
+4. Un changement de presse-papiers entre préflight et écriture est revérifié ;
+   le refus conserve le presse-papiers existant. Une restauration autorisée
+   restitue tous les types et octets originaux.
+
+L’égalité des octets n’établit pas que le contexte privé vivant de l’application
+source peut être reconstruit. La fidélité de toute copie Excel historique, de ses
+cellules fusionnées, bordures, liens et formats complexes reste à qualifier.
+
+## Réactivité
+
+Commande :
 
 ```sh
-swift test
+OCH_RUN_BENCHMARKS=1 swift test --filter OpeningPerformanceTests
 ```
 
-Les contrôles implémentés et exercés couvrent :
+Mesure locale : 10 ouvertures de chauffe, puis 100 ouvertures avec 20 entrées
+texte préchargées, police 12 points, vue compacte et animations désactivées.
 
-- Historique initial de 20 entrées et budget de 256 Mio ; rang le plus récent, promotion, suppression, dédoublonnage strict et éviction d’entrées entières.
-- Conservation des octets, des représentations multiples et de l’ordre des éléments, y compris les formats privés simulés, les métadonnées de source et du Python avec Unicode, tabulations et retours CRLF.
-- Matérialisation des représentations différées avant changement de propriétaire du presse-papiers, notamment depuis un fournisseur dans un autre processus avec lecture sur la file de travail.
-- Conversion d’une exception Objective-C de fournisseur en échec récupérable ; une capture incomplète ou un fichier manquant ne remplace pas le presse-papiers existant.
-- Miniatures bornées sans modification des données d’image originales ; distinction entre taille des fichiers référencés et taille de leurs représentations.
-- Persistance activable après capture en mémoire, restitution des octets après réouverture, suppression de la sauvegarde à la désactivation et absence d’écriture de contenu lorsque la persistance est désactivée.
-- Détection des blobs absents ou endommagés, nettoyage des fichiers orphelins et conservation d’un historique mémoire utilisable si SQLite est endommagé.
-- Clavier de la palette : numéros/AZERTY, sélection après changement des rangs, absence de collage d’une sélection périmée et ouverture des réglages par ⌘,.
-- Routage des événements Carbon vers mcm, rejet des signatures étrangères et suppression du gestionnaire lors de l’arrêt.
-- Préférences initiales, restauration de la fenêtre et des réglages, normalisation des limites numériques avant calcul et repli après un raccourci enregistré invalide.
-- Police de 10 à 28 points, taille et hauteur des lignes cohérentes, valeurs non finies normalisées et préférences conservées au redémarrage.
-- Police initiale à 12 points et largeur minimale de 280 points ; les tailles de police déjà choisies restent conservées.
-- Vue compacte initialement activée, préférence conservée ; hauteur mesurée sur les contrôles natifs sans réduire les polices ni les dimensions des aperçus. Tests de cellules réellement mises en page à 10, 12, 24 et 28 points, avec PNG, insets verticaux, sélection et collage au clavier conservés lors de la bascule.
-- Quatre quadrants autour du pointeur, bas à droite par défaut, écart de 12 points, limites de l’écran, écrans à origine négative et sauvegarde du quadrant lors du passage en position fixe.
-- Animations désactivées par défaut, activables puis désactivables, sans transparence résiduelle.
-- Mode sombre activé/désactivé/automatique persistant ; la palette et les vrais réglages SwiftUI héritent immédiatement de l’apparence. Le retour automatique supprime l’apparence forcée et suit macOS. Les tests restaurent l’apparence du processus sans modifier le système.
-- Lancement à l’ouverture de session : services simulés pour activation, désactivation, idempotence, approbation, erreurs, état modifié dans macOS et aperçu sans enregistrement réel. Les événements d’ouverture et de réouverture marqués login/service restent silencieux ; un lancement manuel reste interactif.
-- Capture en arrière-plan uniquement avec accès déjà autorisé, demandes de permission différées jusqu’à l’ouverture de l’historique, sans lecture du presse-papiers général dans les tests.
-- Catalogues français/anglais complets, arguments de formatage, langue système et changement de langue sans transformation des données originales.
+| Mesure | Millisecondes |
+| --- | ---: |
+| p50 | 4,400 |
+| p95 | 7,210 |
+| Maximum | 7,730 |
 
-Ces fixtures ne prouvent pas que Word ou Excel interpréteront toutes leurs représentations privées exactement comme lors d’un collage direct.
+Cette mesure couvre l’ouverture, la mise en page et la soumission d’affichage
+AppKit. Elle ne mesure pas le premier cadre complet effectivement présenté par
+le compositeur, ni le collage dans une application tierce. L’objectif de 50 ms
+pour cet affichage complet reste à vérifier. **Aucun plafond CPU n’est imposé.**
 
-## Vérification visuelle déjà effectuée
+Après fermeture des fenêtres d’information, un relevé ponctuel de l’application
+installée donne **0,0 % CPU** et **126 960 Kio RSS** (environ 124 Mio), après
+43 secondes d’exécution. Ce point de mesure au repos n’est ni une moyenne ni
+une limite de consommation, et ne caractérise pas le traitement d’images lourdes.
 
-L’application de démonstration a été ouverte par pilotage de l’interface macOS. La palette, les numéros, la promotion d’une entrée après sélection numérique et l’accès aux réglages ont été examinés ; la valeur initiale de 20 entrées et la persistance désactivée ont été vérifiées. Le menu natif permet de quitter proprement l’application. Cette vérification utilise un presse-papiers privé ; aucune autorisation de lecture ou de collage n’a été accordée à mcm à la place de l’utilisateur.
+## Préalables et recette restante
 
-Pour la version 0.2.0, le passage en direct de la langue système à français puis retour a été vérifié, y compris les menus, le titre, les commentaires des entrées et les tailles en octets. Le curseur de police a été testé à 24 puis 14 points ; les lignes s’adaptent sans couper verticalement le texte. Le réglage des animations a été activé puis désactivé. Les préférences de démonstration ont été remises à 14 points, langue système et animations désactivées.
+- Signature Developer ID, notarisation et validation Gatekeeper de distribution :
+  aucun certificat Apple valide installé au moment de la recette.
+- Signature Apple Distribution, provisioning, export final et App Review :
+  préparation fournie, aucune soumission effectuée.
+- Collage automatique avec permission accordée dans Brave, TextEdit, Terminal,
+  Finder, Word et Excel ; révocation des permissions et changement de focus réel.
+- Word : listes, tableaux, images, champs et liens ; fermeture complète de Word
+  et redémarrage avec persistance. Le contrôle simple du gras ne reçoit pas ces cas.
+- Excel : fidélité fonctionnelle historique complète malgré les formats privés ;
+  conserver l’avertissement tant que le cas reproduit n’est pas résolu.
+- Fichiers externes et bookmarks après relancement dans la distribution Store,
+  avec les vraies autorisations ; les tests simulés ne prouvent pas l’acceptation
+  de l’ensemble du parcours par le sandbox et App Review.
+- Ouverture de session réelle, veille/réveil, plusieurs écrans, Spaces, plein
+  écran et navigation VoiceOver complète, sans perturber la session de travail.
 
-Pour la version 0.3.0, le sélecteur carré a été vérifié visuellement : quatre boutons autour du curseur, bas à droite sélectionné initialement, boutons désactivés en position fixe puis activés en mode pointeur. Le choix haut gauche puis le retour bas droite ont été contrôlés. La police de l’aperçu a été mise à 12 points ; le mode fixe et le quadrant bas droite ont été restaurés après vérification.
-
-Pour la version 0.4.0, les lignes compactes ont été comparées visuellement à la présentation espacée : mêmes textes et icônes, marges verticales réduites. Le réglage Vue compacte a été vérifié initialement activé, désactivé puis réactivé en direct ; l’aperçu conserve le mode compact à la fin du contrôle.
-
-Pour la version 0.5.0, le mode sombre a été activé visuellement dans l’aperçu : fond, contrôles, titres, sélection et numéros de l’historique restent lisibles. Le passage au mode clair a été vérifié dans les réglages, puis le choix automatique a été restauré. Aucun réglage d’apparence global de macOS n’a été modifié.
-
-Pour la version 0.6.0, la nouvelle section Général et son option de lancement silencieux ont été vérifiées dans l’aperçu : désactivée initialement, activée puis désactivée. Cet aperçu utilise un service simulé en mémoire : aucun véritable élément d’ouverture de session n’a été enregistré ni supprimé pendant les tests.
-
-Deux fixtures de fournisseurs différés internes au processus de test produisent un avertissement AppKit d’affinité de thread. Le fournisseur différé testé dans un processus distinct remplit sa promesse sur son propre fil principal, sans cet avertissement ; la récupération des octets et la gestion d’une exception sont vérifiées.
-
-## Recette manuelle restant à effectuer
-
-| Scénario | Résultat attendu |
-| --- | --- |
-| Activation du lancement automatique depuis `/Applications/mcm.app`, puis nouvelle ouverture de session | mcm reste dans la barre de menus, sans fenêtre, activation ou demande de permission ; le raccourci ouvre l’historique. Ce scénario réel nécessite une déconnexion et n’a pas été exécuté automatiquement. |
-| Désactivation ou retrait dans les réglages système | mcm ne réenregistre pas automatiquement l’option ; les réglages reflètent l’état courant. |
-| Raccourci global sur le clavier réel, y compris conflit avec Quicksilver | ⌥A ouvre et masque mcm ; un conflit est signalé et un autre raccourci peut être enregistré. |
-| Collage automatique avec autorisations accordées | Un numéro ou Entrée colle une seule fois dans l’application précédente ; l’entrée remonte en tête. |
-| Autorisations refusées ou révoquées | Une indication est affichée ; le collage manuel reste possible pour une entrée recopiée. |
-| Brave, TextEdit, Terminal et Finder | Le bon destinataire reçoit le contenu et les formats qu’il prend en charge. |
-| Word : styles, listes, tableaux et images | Comparer le collage direct et le collage via mcm, puis refaire le test après fermeture de la source. |
-| Excel : plages, formules, formats numériques, bordures et cellules fusionnées | Comparer au collage direct dans Excel et vérifier les formats privés effectivement exposés. |
-| Persistance avec de vrais contenus Word/Excel et images | Retrouver les mêmes résultats après redémarrage de mcm ; ne pas confondre réussite d’un test d’octets et fidélité fonctionnelle d’Office. |
-| Plusieurs écrans, Spaces, plein écran et déconnexion d’écran | La palette reste accessible ; le déplacement la fixe et le mode pointeur peut être réactivé. |
-| Veille puis réveil | La capture reprend et le raccourci continue de fonctionner. |
-| Quitter juste après une copie ou une désactivation de persistance | Les opérations en cours sont terminées et aucune sauvegarde supprimée n’est recréée. |
-| Fichiers multiples, fichiers déplacés/supprimés et volumes indisponibles | Les références utilisables sont collables ; une indisponibilité est signalée. |
-| Copies rapides et images volumineuses | L’interface répond pendant les traitements ; aucune copie n’est présentée comme complète après perte d’un format. |
-
-## Mesures à recueillir
-
-Lancer le bundle avec `--measure`, ouvrir plusieurs fois une palette déjà chargée et relever les durées du chemin d’ouverture AppKit. Compléter par une observation de l’affichage et du collage réel, ainsi que du CPU et de la mémoire, avec du texte, des images volumineuses et un historique augmenté dans les réglages.
-
-L’objectif de 50 ms à chaud au 95e percentile **n’est pas encore validé**. Aucun plafond CPU n’est un critère de réception. La fréquence de lecture de 200 ms implique une limite connue : les copies intermédiaires remplacées entre deux lectures peuvent échapper à l’historique.
+La lecture toutes les 200 ms conserve sa limite connue : une copie remplacée
+entre deux lectures peut ne pas être capturée.

@@ -1,15 +1,4 @@
 #!/bin/bash
 set -euo pipefail
-MCM_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-"$MCM_ROOT/scripts/build-app.sh"
-MCM_PREVIEW="$MCM_ROOT/build/mcm Preview.app"
-mkdir -p "$MCM_PREVIEW/Contents/MacOS" "$MCM_PREVIEW/Contents/Resources"
-cp "$MCM_ROOT/build/mcm.app/Contents/MacOS/mcm" "$MCM_PREVIEW/Contents/MacOS/mcm"
-cp -R "$MCM_ROOT/build/mcm.app/Contents/Resources/." "$MCM_PREVIEW/Contents/Resources/"
-cp "$MCM_ROOT/Resources/Info.plist" "$MCM_PREVIEW/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.arthur.mcm.preview' "$MCM_PREVIEW/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleName mcm Preview' "$MCM_PREVIEW/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName mcm Preview' "$MCM_PREVIEW/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Add :MCMPreviewMode bool true' "$MCM_PREVIEW/Contents/Info.plist"
-codesign --force --sign - "$MCM_PREVIEW"
-printf 'Preview (private clipboard only): %s\n' "$MCM_PREVIEW"
+OCH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$OCH_ROOT/scripts/build-app.sh" --preview

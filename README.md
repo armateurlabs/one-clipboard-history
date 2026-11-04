@@ -1,90 +1,90 @@
-# mcm
+# One Clipboard History
 
-Gestionnaire de presse-papiers personnel pour **macOS 27 sur Apple Silicon**, écrit en Swift avec AppKit et des réglages SwiftUI. Il reprend le fonctionnement de l’historique de Quicksilver : palette flottante, dernières copies en tête et collage immédiat par numéro.
+Un historique du presse-papiers natif pour **macOS 27 sur Apple Silicon**, écrit en Swift avec AppKit et des réglages SwiftUI. Inspiré de la rapidité de l’historique de Quicksilver : **⌥A → un chiffre → coller**.
 
-## Compiler et ouvrir
+[English](README.en.md) · [Téléchargements](https://github.com/armateurlabs/one-clipboard-history/releases) · [Licence MIT](LICENSE) · [Confidentialité](PRIVACY.md)
 
-Prérequis : macOS 27 et Xcode avec les outils de développement Swift sélectionnés.
+| Apparence claire | Apparence sombre |
+| --- | --- |
+| ![Historique compact en apparence claire, avec texte, code, image et fichiers de démonstration](docs/screenshots/history-light.png) | ![Le même historique en apparence sombre native](docs/screenshots/history-dark.png) |
+
+Les captures montrent l’application réelle avec des données synthétiques, sans contenu personnel.
+
+## Utilisation
+
+1. Copier du texte, du contenu enrichi, une image ou des fichiers normalement.
+2. Appuyer sur **⌥A** pour afficher ou masquer l’historique.
+3. Appuyer sur **1 à 9** pour coller l’entrée correspondante dans l’application précédente.
+
+Les flèches sélectionnent une ligne ; **Entrée** ou un double-clic colle la sélection ; **Échap** masque la fenêtre. L’engrenage et **⌘,** ouvrent les réglages. Le raccourci est configurable, y compris pour éviter un conflit avec Quicksilver.
+
+- Dernière copie au rang 1 ; les doublons strictement identiques remontent en tête. Les mises en forme différentes restent distinctes.
+- Texte pur, HTML, RTF, images, références de fichiers et représentations privées disponibles sont conservés sans normaliser leurs octets. Miniatures et résumés sont séparés des originaux.
+- **20 entrées**, **256 Mio**, police **12 points**, vue compacte, aperçus et tailles affichés par défaut.
+- Fenêtre instantanée, sans fondu par défaut ; animations facultatives. Largeur minimale de 280 points.
+- Position fixe mémorisée ou ouverture au pointeur, avec choix de quatre quadrants ; bas à droite par défaut. Déplacer la fenêtre la fixe à son nouvel emplacement.
+- Mode sombre **activé / désactivé / automatique**, français/anglais avec changement de langue immédiat, police réglable de 10 à 28 points.
+- Persistance et lancement silencieux à l’ouverture de session **désactivés par défaut**.
+
+![Réglages natifs de One Clipboard History](docs/screenshots/settings.png)
+
+## Installation
+
+Télécharger le ZIP depuis [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), l’extraire et placer **One Clipboard History.app** dans Applications. Quitter l’ancienne application avant de la remplacer.
+
+**État de la version 0.7.0 :** la version personnelle est signée localement (ad hoc). La signature Developer ID et la notarisation nécessitent un certificat Apple ; un build local n’est pas une distribution validée par Gatekeeper. Le projet prépare une variante Mac App Store, sans annoncer sa disponibilité sur le Store. Voir le [dossier de préparation](docs/APP_STORE.md) et les [preuves de validation](docs/VALIDATION.md).
+
+L’application démarre dans la barre de menus. Fermer la fenêtre laisse la capture active ; **Quitter One Clipboard History** l’arrête. Dans Réglages → Général, l’option de lancement à la connexion reste silencieuse et respecte les changements effectués dans macOS.
+
+## Permissions et confidentialité
+
+- Autoriser l’accès au presse-papiers quand macOS le demande. Au lancement en arrière-plan, les demandes de permission attendent une interaction explicite.
+- Autoriser l’envoi de raccourcis dans les réglages de confidentialité macOS pour le collage automatique. Si l’autorisation manque, l’entrée est recopiée et reste collable manuellement avec **⌘V**.
+- Les fichiers du Finder restent des **références aux originaux**. Leur existence et leur accessibilité sont vérifiées ; ils ne sont pas archivés avec l’historique.
+- Aucun compte, publicité, télémétrie ou envoi du contenu du presse-papiers. Les liens GitHub ne s’ouvrent que sur action explicite.
+
+Sans persistance, l’historique reste en mémoire et disparaît à la fermeture. Son activation sauvegarde les copies localement ; sa désactivation supprime la sauvegarde en conservant la session mémoire. Le stockage n’est pas chiffré par l’application. « Effacer l’historique » ne supprime jamais les fichiers originaux.
+
+Pour conserver les réglages des premières versions, la distribution directe utilise toujours l’identifiant `com.arthur.mcm` et `~/Library/Application Support/mcm/History/`. La variante sandboxée possède son propre conteneur et propose un import explicite d’un ancien dossier History, sans modifier la source.
+
+Lire la [politique de confidentialité complète](PRIVACY.md), également accessible dans À propos.
+
+## Compiler
+
+Prérequis : macOS 27, Apple Silicon et Xcode 27 avec ses outils de ligne de commande sélectionnés.
 
 ```sh
-cd /Users/arthur/workspace/mcm
+git clone https://github.com/armateurlabs/one-clipboard-history.git
+cd one-clipboard-history
 swift test
 ./scripts/build-app.sh
-open build/mcm.app
+open 'build/One Clipboard History.app'
 ```
 
-Le script compile en mode release, génère l’icône et crée `build/mcm.app`. Il applique une signature locale ad hoc par défaut. Une identité de signature disponible dans le trousseau peut être fournie explicitement :
+Le script génère une icône originale et un bundle signé localement, avec ses traductions, sa licence et sa politique de confidentialité. Une identité disponible dans le trousseau peut être fournie avec `OCH_SIGN_IDENTITY` (l’ancien `MCM_SIGN_IDENTITY` reste accepté).
 
 ```sh
-MCM_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' ./scripts/build-app.sh
-```
-
-Le projet peut aussi être ouvert dans Xcode via `Package.swift`. L’application reste dans la barre de menus après fermeture de sa fenêtre ; le menu de mcm permet de la quitter.
-
-Dans **Réglages → Général**, activer **Lancer à l’ouverture de session** pour démarrer mcm silencieusement à la connexion : aucune fenêtre ne s’ouvre et le focus reste dans l’application utilisée. L’option est désactivée par défaut. Elle utilise les éléments d’ouverture de session natifs de macOS ; si une approbation est nécessaire, mcm propose d’ouvrir les réglages système correspondants. La désactiver n’arrête pas mcm actuellement ouvert.
-
-Au démarrage en arrière-plan, la capture reprend si l’accès au presse-papiers est déjà autorisé. Sinon, la demande d’accès attend l’ouverture de l’historique ; les aperçus de fichiers sont également différés pour éviter une demande de permission pendant la connexion. Les changements faits directement dans les éléments d’ouverture de session de macOS sont respectés et réaffichés dans mcm.
-
-## Utiliser l’historique
-
-- **⌥A** ouvre ou masque la palette ; le raccourci initial est résolu selon la disposition du clavier. Si Quicksilver utilise déjà cette combinaison, libérer son raccourci ou choisir une autre combinaison dans mcm.
-- **1 à 9** collent les neuf premières lignes. Les touches de la rangée numérique fonctionnent aussi sur AZERTY. Les flèches déplacent la sélection ; Entrée ou un double-clic collent la sélection ; Échap masque la palette.
-- Une nouvelle copie arrive au rang 1. Une copie strictement identique et une entrée recollée remontent en tête sans créer de doublon. Deux versions ayant une mise en forme différente restent distinctes.
-- Le collage revient dans l’application utilisée avant l’ouverture de mcm. La palette se masque ensuite par défaut.
-- L’engrenage, le menu de mcm et **⌘,** donnent accès aux réglages. La longueur d’historique, le budget de données, le raccourci, les aperçus, les tailles et le masquage après collage sont configurables.
-- La taille de police de l’historique se règle de **10 à 28 points**, avec **12 points par défaut**. Le texte, les numéros et la hauteur des lignes s’adaptent immédiatement ; les tailles de police déjà choisies restent conservées.
-- La **vue compacte est activée par défaut** : les lignes s’ajustent au contenu avec moins de marge verticale, sans réduire la police, les icônes ou les aperçus. À 12 points, leur hauteur passe de 56 à 44 points. Désactiver cette option dans Affichage rétablit la présentation plus espacée.
-- Le réglage **Mode sombre** propose **Activé** (sombre), **Désactivé** (clair) et **Automatique (système)**, choisi par défaut. Il s’applique immédiatement à la palette et aux réglages ; le mode automatique suit les changements de macOS.
-- La fenêtre apparaît et disparaît **instantanément par défaut**, sans fondu. Le réglage des animations permet de réactiver le comportement natif de macOS.
-- L’interface est disponible en **français et en anglais**, avec la langue système par défaut. Le choix dans les réglages actualise immédiatement la fenêtre, les menus et les commentaires des entrées. Le contenu copié reste intact.
-- La position est fixe par défaut. Le mode d’ouverture au pointeur est optionnel ; un petit sélecteur carré choisit le quadrant **haut gauche, haut droite, bas gauche ou bas droite**, avec **bas droite par défaut**. La fenêtre reste dans la zone utilisable de l’écran ; déplacer la palette la fixe à son nouvel emplacement sans perdre le quadrant choisi.
-- La largeur de la palette peut descendre jusqu’à **280 points**.
-
-Les valeurs initiales sont **20 entrées**, **256 Mio de données**, police de **12 points**, vue compacte activée, apparence automatique, aperçus et tailles affichés, persistance et animations désactivées. Les limites s’appliquent aux entrées entières : mcm ne retire pas certains formats d’une copie pour la faire tenir dans le budget.
-
-## Autorisations et conservation
-
-Autoriser la lecture du presse-papiers dans les Réglages Système lorsqu’elle est demandée. Pour envoyer le collage à une autre application, accorder également l’autorisation **Accessibilité** à mcm ; les réglages de mcm proposent les accès correspondants. Si le collage automatique est indisponible, l’entrée est recopiée dans le presse-papiers et peut être collée manuellement avec **⌘V**.
-
-Sans persistance, les contenus de l’historique restent en mémoire. Activer la conservation enregistre l’historique courant et les copies suivantes dans `~/Library/Application Support/mcm/History/`. La désactiver supprime cette sauvegarde et conserve l’historique de la session en mémoire. Un échec de sauvegarde est signalé et laisse les copies disponibles en mémoire.
-
-Les fichiers du Finder sont conservés comme **références aux originaux**, pas comme archives indépendantes. Le collage vérifie qu’ils existent encore. Les données d’image originales, les formats et les métadonnées fournis par l’application source sont conservés ; une miniature ne remplace jamais l’original. Aucune fonctionnalité réseau ni journalisation du contenu des copies n’est ajoutée par mcm.
-
-## Fidélité et architecture
-
-Une entrée contient tous les éléments du presse-papiers, leurs représentations et leurs octets : texte pur, HTML, RTF, images, URL de fichiers et formats privés disponibles. Les espaces, tabulations, encodages et fins de ligne ne sont pas normalisés. Les représentations différées sont matérialisées pendant la capture ; les objets AppKit périmés ne sont jamais conservés dans l’historique. Une capture incomplète est indiquée et son collage automatique est bloqué.
-
-```mermaid
-flowchart LR
-    P[NSPasteboard] --> Q[File série de capture]
-    Q --> S[Instantanés de données]
-    S --> H[Actor de l’historique]
-    H --> U[Palette AppKit et réglages SwiftUI]
-    H --> D[SQLite et fichiers locaux si activés]
-    S --> V[Aperçus en arrière-plan]
-    U --> C[Restitution des formats et collage]
-    C --> P
-```
-
-La capture est isolée de l’interface ; l’actor sérialise les modifications de l’historique et de sa sauvegarde. Les aperçus sont calculés en arrière-plan et la restitution reconstruit de nouveaux objets AppKit. Une petite passerelle Objective-C transforme les exceptions `NSException` des échanges avec le presse-papiers en erreurs récupérables.
-
-La surveillance commence à **200 ms**. Plusieurs copies remplacées entre deux lectures peuvent donc ne pas être capturées. Les tests contrôlent la restitution des octets et des formats privés simulés ; la fidélité réelle de Word et Excel doit encore être comparée à leur collage direct. Les formats privés dépendant de l’état de leur application source ne sont pas nécessairement autonomes.
-
-## Aperçu et mesures
-
-Pour examiner l’interface avec des exemples, sans lire l’historique réel :
-
-```sh
+./scripts/validate-app.sh 'build/One Clipboard History.app'
 ./scripts/preview-app.sh
-open 'build/mcm Preview.app'
+open 'build/One Clipboard History Preview.app'
 ```
 
-Cette application utilise un presse-papiers privé et des préférences de démonstration distinctes. Elle ne teste pas le collage réel dans une autre application.
+L’aperçu utilise un presse-papiers privé, des préférences distinctes et un service de lancement simulé. Il permet de photographier et d’examiner l’interface sans capturer l’historique réel.
 
-Après avoir quitté mcm, le mode suivant affiche uniquement des durées d’ouverture dans le terminal :
+La cible Xcode **OneClipboardHistory Store** prépare le sandbox et l’archivage. Les commandes, exigences de signature et résultats de faisabilité sont décrits dans [APP_STORE.md](docs/APP_STORE.md).
 
-```sh
-./build/mcm.app/Contents/MacOS/mcm --measure
-```
+## Fidélité, performances et limites
 
-**Aucun quota CPU n’est imposé.** L’objectif d’ouverture à chaud sous 50 ms au 95e percentile reste à mesurer ; `--measure` indique la durée du chemin d’ouverture AppKit, sans journaliser le contenu et sans constituer à lui seul une mesure du premier affichage complet. Les ressources seront ajustées selon les observations. Le détail des contrôles effectués et restant à faire est dans [docs/VALIDATION.md](docs/VALIDATION.md).
+La capture lit le presse-papiers toutes les **200 ms**, sur une file dédiée. Les copies intermédiaires remplacées entre deux lectures peuvent échapper à l’historique. Les formats différés sont matérialisés pendant la capture ; une entrée incomplète est signalée et son collage est bloqué. L’éviction concerne des entrées entières, jamais certains formats d’une copie.
+
+La restitution recrée des objets AppKit indépendants. Les formats privés de Word et Excel peuvent dépendre de l’application source : les tests d’octets ne prouvent pas à eux seuls la fidélité fonctionnelle d’Office. Les scénarios vérifiés et restant à effectuer sont documentés dans [VALIDATION.md](docs/VALIDATION.md).
+
+**Limite Excel constatée :** une ancienne copie peut coller les valeurs calculées à la place des formules, même lorsque tous ses formats et octets sont conservés. Les entrées concernées portent une indication et demandent confirmation avant leur restauration. Si la copie est toujours intacte dans le presse-papiers, l’application conserve son propriétaire et le comportement du collage direct. Aucun format original n’est retiré pour contourner cette limite.
+
+Aucun quota CPU n’est imposé. L’objectif d’ouverture à chaud est un 95e percentile sous 50 ms ; les mesures précisent ce qui a effectivement été chronométré. Le mode `--measure` ne journalise que des durées, jamais le contenu copié.
+
+## Contribuer
+
+Ouvrir une [issue](https://github.com/armateurlabs/one-clipboard-history/issues) avec la version de macOS, la version de l’application et des étapes reproductibles. Utiliser des exemples synthétiques : ne pas publier de secrets ou d’historique personnel. Exécuter `swift test` et les vérifications du bundle avant de proposer un changement.
+
+Copyright © 2026 **Armateur Labs**. Distribué sous [licence MIT](LICENSE).

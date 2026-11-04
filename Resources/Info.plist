@@ -2,20 +2,22 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>mcm</string>
-    <key>CFBundleDisplayName</key><string>mcm</string>
+    <key>CFBundleName</key><string>One Clipboard History</string>
+    <key>CFBundleDisplayName</key><string>One Clipboard History</string>
     <key>CFBundleIdentifier</key><string>com.arthur.mcm</string>
-    <key>CFBundleExecutable</key><string>mcm</string>
+    <key>CFBundleExecutable</key><string>OneClipboardHistory</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.6.0</string>
-    <key>CFBundleVersion</key><string>6</string>
+    <key>CFBundleShortVersionString</key><string>0.7.0</string>
+    <key>CFBundleVersion</key><string>7</string>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key><array><string>en</string><string>fr</string></array>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>27.0</string>
+    <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
-    <key>NSPasteboardUsageDescription</key><string>mcm keeps your copies in a local history so you can paste them again.</string>
+    <key>NSHumanReadableCopyright</key><string>Copyright © 2026 Armateur Labs. MIT License.</string>
+    <key>NSPasteboardUsageDescription</key><string>One Clipboard History keeps your copies in a local history so you can paste them again.</string>
 </dict>
 </plist>

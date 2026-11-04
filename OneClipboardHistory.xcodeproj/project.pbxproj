@@ -1,0 +1,163 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		010000000000000000000001 /* OneClipboardHistoryCore in Frameworks */ = {isa = PBXBuildFile; productRef = 110000000000000000000001 /* OneClipboardHistoryCore */; };
+		010000000000000000000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 090000000000000000000001 /* InfoPlist.strings */; };
+		010000000000000000000003 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 020000000000000000000006 /* PrivacyInfo.xcprivacy */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		020000000000000000000001 /* One Clipboard History.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "One Clipboard History.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		020000000000000000000002 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		020000000000000000000003 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		020000000000000000000004 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		020000000000000000000005 /* OneClipboardHistory.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = OneClipboardHistory.entitlements; sourceTree = "<group>"; };
+		020000000000000000000006 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		020000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		020000000000000000000008 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		020000000000000000000009 /* fr */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = fr; path = fr.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		030000000000000000000001 /* OneClipboardHistoryApp */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources/OneClipboardHistoryApp;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		040000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (010000000000000000000001 /* OneClipboardHistoryCore in Frameworks */,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		050000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				030000000000000000000001 /* OneClipboardHistoryApp */,
+				050000000000000000000003 /* AppStore */,
+				050000000000000000000004 /* Resources */,
+				050000000000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		050000000000000000000002 /* Products */ = {isa = PBXGroup; children = (020000000000000000000001 /* One Clipboard History.app */,); name = Products; sourceTree = "<group>"; };
+		050000000000000000000003 /* AppStore */ = {
+			isa = PBXGroup;
+			children = (
+				020000000000000000000002 /* Debug.xcconfig */,
+				020000000000000000000003 /* Release.xcconfig */,
+				020000000000000000000004 /* Base.xcconfig */,
+				020000000000000000000005 /* OneClipboardHistory.entitlements */,
+				020000000000000000000006 /* PrivacyInfo.xcprivacy */,
+				020000000000000000000007 /* Info.plist */,
+			);
+			path = AppStore;
+			sourceTree = "<group>";
+		};
+		050000000000000000000004 /* Resources */ = {isa = PBXGroup; children = (090000000000000000000001 /* InfoPlist.strings */,); path = Resources; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		060000000000000000000001 /* OneClipboardHistoryStore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0C0000000000000000000002 /* Build configuration list for PBXNativeTarget "OneClipboardHistoryStore" */;
+			buildPhases = (
+				080000000000000000000001 /* Sources */,
+				040000000000000000000001 /* Frameworks */,
+				070000000000000000000001 /* Resources */,
+				0A0000000000000000000001 /* Prepare icon and local legal documents */,
+			);
+			buildRules = ();
+			dependencies = ();
+			fileSystemSynchronizedGroups = (030000000000000000000001 /* OneClipboardHistoryApp */,);
+			name = OneClipboardHistoryStore;
+			packageProductDependencies = (110000000000000000000001 /* OneClipboardHistoryCore */,);
+			productName = "One Clipboard History";
+			productReference = 020000000000000000000001 /* One Clipboard History.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		060000000000000000000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2710;
+				LastUpgradeCheck = 2710;
+				TargetAttributes = {060000000000000000000001 = {CreatedOnToolsVersion = 27.1; };};
+			};
+			buildConfigurationList = 0C0000000000000000000001 /* Build configuration list for PBXProject "OneClipboardHistory" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, fr, Base,);
+			mainGroup = 050000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (100000000000000000000001 /* XCLocalSwiftPackageReference "." */,);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 050000000000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (060000000000000000000001 /* OneClipboardHistoryStore */,);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		070000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (010000000000000000000002 /* InfoPlist.strings in Resources */, 010000000000000000000003 /* PrivacyInfo.xcprivacy in Resources */,); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		080000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		090000000000000000000001 /* InfoPlist.strings */ = {isa = PBXVariantGroup; children = (020000000000000000000008 /* en */, 020000000000000000000009 /* fr */,); name = InfoPlist.strings; sourceTree = "<group>"; };
+/* End PBXVariantGroup section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0A0000000000000000000001 /* Prepare icon and local legal documents */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ("$(SRCROOT)/AppStore/prepare-resources.sh", "$(SRCROOT)/scripts/make-icon.swift", "$(SRCROOT)/LICENSE", "$(SRCROOT)/PRIVACY.md",);
+			name = "Prepare icon and local legal documents";
+			outputPaths = ("$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/AppIcon.icns", "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/LICENSE.txt", "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/PRIVACY.txt",);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"$SRCROOT/AppStore/prepare-resources.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0B0000000000000000000001 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; }; name = Debug; };
+		0B0000000000000000000002 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = macosx; }; name = Release; };
+		0B0000000000000000000003 /* Debug */ = {isa = XCBuildConfiguration; baseConfigurationReference = 020000000000000000000002 /* Debug.xcconfig */; buildSettings = {}; name = Debug; };
+		0B0000000000000000000004 /* Release */ = {isa = XCBuildConfiguration; baseConfigurationReference = 020000000000000000000003 /* Release.xcconfig */; buildSettings = {}; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0C0000000000000000000001 /* Build configuration list for PBXProject "OneClipboardHistory" */ = {isa = XCConfigurationList; buildConfigurations = (0B0000000000000000000001 /* Debug */, 0B0000000000000000000002 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		0C0000000000000000000002 /* Build configuration list for PBXNativeTarget "OneClipboardHistoryStore" */ = {isa = XCConfigurationList; buildConfigurations = (0B0000000000000000000003 /* Debug */, 0B0000000000000000000004 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		100000000000000000000001 /* XCLocalSwiftPackageReference "." */ = {isa = XCLocalSwiftPackageReference; relativePath = .; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		110000000000000000000001 /* OneClipboardHistoryCore */ = {isa = XCSwiftPackageProductDependency; package = 100000000000000000000001 /* XCLocalSwiftPackageReference "." */; productName = OneClipboardHistoryCore; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 060000000000000000000002 /* Project object */;
+}
