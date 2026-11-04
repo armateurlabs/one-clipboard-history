@@ -13,17 +13,17 @@ public enum PasteboardServiceError: LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .accessDenied:
-            return "L’accès au presse-papiers est refusé dans les Réglages Système."
+            return L10n.text("Clipboard access is denied in System Settings.")
         case .changedDuringCapture:
-            return "Le presse-papiers a changé pendant la capture ; une nouvelle lecture sera effectuée."
+            return L10n.text("The clipboard changed during capture; it will be read again.")
         case .incompleteCapture(let types):
-            return "Capture incomplète : \(types.count) représentation(s) indisponible(s)."
+            return L10n.format("Incomplete capture: %ld unavailable representations.", types.count)
         case .unavailableFiles(let paths):
-            return "Fichier(s) indisponible(s) : \(paths.joined(separator: ", "))."
+            return L10n.format("Unavailable files: %@.", paths.joined(separator: ", "))
         case .unsupportedType(let type):
-            return "Impossible de restaurer le format \(type). Le presse-papiers n’a pas été modifié."
+            return L10n.format("Cannot restore the %@ format. The clipboard was not changed.", type)
         case .writeFailed:
-            return "macOS n’a pas pu restaurer le contenu du presse-papiers."
+            return L10n.text("macOS could not restore the clipboard contents.")
         }
     }
 }
@@ -240,8 +240,16 @@ public final class PasteboardService: @unchecked Sendable {
 
     private func withPasteboardBoundary<T>(_ operation: () throws -> T) throws -> T {
         var result: Result<T, Error>?
-        try MCMExceptionBoundary.perform {
-            result = Result { try operation() }
+        do {
+            try MCMExceptionBoundary.perform {
+                result = Result { try operation() }
+            }
+        } catch {
+            if (error as NSError).domain == "app.mcm.pasteboard.communication" {
+                throw NSError(domain: "app.mcm.pasteboard.communication", code: (error as NSError).code,
+                              userInfo: [NSLocalizedDescriptionKey: L10n.text("Clipboard communication was interrupted. Capture will be retried.")])
+            }
+            throw error
         }
         guard let result else { throw PasteboardServiceError.writeFailed }
         return try result.get()

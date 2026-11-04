@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import Testing
+import MCMCore
 @testable import MCMApp
 
 @Suite("Native settings", .serialized)
@@ -31,6 +32,9 @@ struct SettingsTests {
         #expect(settings.hideAfterPasting)
         #expect(!settings.positionAtPointer)
         #expect(!settings.persistenceEnabled)
+        #expect(settings.historyFontSize == 14)
+        #expect(!settings.animationsEnabled)
+        #expect(settings.language == .system)
         #expect(settings.shortcut.label == "⌥A")
         #expect(settings.shortcut.modifiers == UInt32(optionKey))
         #expect(settings.savedFrame == nil)
@@ -62,7 +66,7 @@ struct SettingsTests {
         #expect(!reloaded.hideAfterPasting)
         #expect(reloaded.positionAtPointer)
         #expect(reloaded.persistenceEnabled)
-        #expect(reloaded.shortcut.label == "⌃⌥Espace")
+        #expect(reloaded.shortcut.label == "⌃⌥" + L10n.text("Space"))
         #expect(reloaded.savedFrame == frame)
     }
 
@@ -101,5 +105,48 @@ struct SettingsTests {
         #expect(recorded.keyCode == 12)
         #expect(recorded.modifiers == UInt32(controlKey | optionKey | shiftKey | cmdKey))
         #expect(recorded.label == "⌃⌥⇧⌘Q")
+    }
+
+    @Test func displayPreferencesPersistAndNotifyImmediately() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = AppSettings(defaults: defaults)
+        var changes = 0
+        settings.onChange = { changes += 1 }
+        settings.historyFontSize = 22
+        settings.animationsEnabled = true
+        settings.language = .french
+
+        let reloaded = AppSettings(defaults: defaults)
+        #expect(changes == 3)
+        #expect(reloaded.historyFontSize == 22)
+        #expect(reloaded.animationsEnabled)
+        #expect(reloaded.language == .french)
+        #expect(defaults.double(forKey: "historyFontSize") == 22)
+        #expect(defaults.bool(forKey: "animationsEnabled"))
+        #expect(defaults.string(forKey: "language") == "fr")
+    }
+
+    @Test func fontSizeIsNormalizedOnLoadAndLiveAssignment() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        for (stored, expected) in [(0.0, 10.0), (100.0, 28.0), (Double.nan, 14.0),
+                                   (Double.infinity, 14.0), (-Double.infinity, 14.0)] {
+            defaults.set(stored, forKey: "historyFontSize")
+            let settings = AppSettings(defaults: defaults)
+            #expect(settings.historyFontSize == expected)
+            settings.historyFontSize = stored
+            #expect(settings.historyFontSize == expected)
+            #expect(defaults.double(forKey: "historyFontSize") == expected)
+        }
+    }
+
+    @Test func unsupportedLanguageFallsBackToSystemAndSpaceLabelUsesLocalization() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set("unsupported-language", forKey: "language")
+        #expect(AppSettings(defaults: defaults).language == .system)
+        let legacy = KeyboardShortcut(keyCode: 49, modifiers: UInt32(optionKey), keyLabel: "Espace")
+        #expect(legacy.label == "⌥" + L10n.text("Space"))
     }
 }

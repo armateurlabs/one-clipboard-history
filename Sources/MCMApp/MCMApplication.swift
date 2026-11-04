@@ -1,4 +1,5 @@
 import AppKit
+import MCMCore
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -17,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                !ProcessInfo.processInfo.arguments.contains("--demo") { controller.show() }
         } catch {
             let alert = NSAlert()
-            alert.messageText = "mcm ne peut pas démarrer"
+            alert.messageText = L10n.text("mcm could not start")
             alert.informativeText = error.localizedDescription
             alert.runModal()
             NSApp.terminate(nil)

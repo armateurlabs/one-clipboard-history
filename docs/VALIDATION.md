@@ -1,6 +1,6 @@
 # Validation de mcm — 4 novembre 2026
 
-État de validation de la première version personnelle, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **48 tests**, dont 35 sur les données et la persistance et 13 sur AppKit, les réglages et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
+État de validation de la version personnelle 0.2.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **59 tests**, dont 40 sur les données, la persistance et la localisation et 19 sur AppKit, les réglages et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
 
 ## Contrôles automatisés
 
@@ -22,12 +22,17 @@ Les contrôles implémentés et exercés couvrent :
 - Clavier de la palette : numéros/AZERTY, sélection après changement des rangs, absence de collage d’une sélection périmée et ouverture des réglages par ⌘,.
 - Routage des événements Carbon vers mcm, rejet des signatures étrangères et suppression du gestionnaire lors de l’arrêt.
 - Préférences initiales, restauration de la fenêtre et des réglages, normalisation des limites numériques avant calcul et repli après un raccourci enregistré invalide.
+- Police de 10 à 28 points, taille et hauteur des lignes cohérentes, valeurs non finies normalisées et préférences conservées au redémarrage.
+- Animations désactivées par défaut, activables puis désactivables, sans transparence résiduelle.
+- Catalogues français/anglais complets, arguments de formatage, langue système et changement de langue sans transformation des données originales.
 
 Ces fixtures ne prouvent pas que Word ou Excel interpréteront toutes leurs représentations privées exactement comme lors d’un collage direct.
 
 ## Vérification visuelle déjà effectuée
 
 L’application de démonstration a été ouverte par pilotage de l’interface macOS. La palette, les numéros, la promotion d’une entrée après sélection numérique et l’accès aux réglages ont été examinés ; la valeur initiale de 20 entrées et la persistance désactivée ont été vérifiées. Le menu natif permet de quitter proprement l’application. Cette vérification utilise un presse-papiers privé ; aucune autorisation de lecture ou de collage n’a été accordée à mcm à la place de l’utilisateur.
+
+Pour la version 0.2.0, le passage en direct de la langue système à français puis retour a été vérifié, y compris les menus, le titre, les commentaires des entrées et les tailles en octets. Le curseur de police a été testé à 24 puis 14 points ; les lignes s’adaptent sans couper verticalement le texte. Le réglage des animations a été activé puis désactivé. Les préférences de démonstration ont été remises à 14 points, langue système et animations désactivées.
 
 Deux fixtures de fournisseurs différés internes au processus de test produisent un avertissement AppKit d’affinité de thread. Le fournisseur différé testé dans un processus distinct remplit sa promesse sur son propre fil principal, sans cet avertissement ; la récupération des octets et la gestion d’une exception sont vérifiées.
 

@@ -24,6 +24,11 @@ struct HistoryPanelTests {
         return nil
     }
 
+    private func textFields(in view: NSView) -> [NSTextField] {
+        let own = (view as? NSTextField).map { [$0] } ?? []
+        return own + view.subviews.flatMap { textFields(in: $0) }
+    }
+
     private func key(_ code: UInt16, characters: String, modifiers: NSEvent.ModifierFlags = []) throws -> NSEvent {
         try #require(NSEvent.keyEvent(
             with: .keyDown, location: .zero, modifierFlags: modifiers,
@@ -132,5 +137,55 @@ struct HistoryPanelTests {
 
         #expect(openedSettings == 1)
         #expect(!pasted)
+    }
+
+    @Test func fontSizeUpdatesVisibleTextAndRowGeometryTogether() throws {
+        _ = NSApplication.shared
+        let panel = HistoryPanelController()
+        let rows = makeRows(2)
+        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 24)
+        let table = try #require(findTable(in: panel.window?.contentView))
+        let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
+        let fonts = textFields(in: cell).compactMap { $0.font?.pointSize }
+
+        #expect(table.rowHeight == 70)
+        #expect(panel.tableView(table, heightOfRow: 0) == 70)
+        #expect(cell.textField?.font?.pointSize == 24)
+        #expect(fonts.contains(22))
+        #expect(fonts.allSatisfy { $0 == 24 || $0 == 22 })
+
+        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 10)
+        let small = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
+        #expect(table.rowHeight == 56)
+        #expect(small.textField?.font?.pointSize == 10)
+        #expect(textFields(in: small).allSatisfy { $0.font?.pointSize == 10 })
+    }
+
+    @Test func invalidFontSizesStayFiniteAndBounded() throws {
+        _ = NSApplication.shared
+        let panel = HistoryPanelController()
+        let rows = makeRows(1)
+        let table = try #require(findTable(in: panel.window?.contentView))
+        for (requested, expected) in [(Double.nan, 14.0), (.infinity, 14.0), (-20, 10), (1000, 28)] {
+            panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: requested)
+            let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
+            #expect(cell.textField?.font?.pointSize == CGFloat(expected))
+            #expect(table.rowHeight.isFinite)
+            #expect(table.rowHeight >= 56 && table.rowHeight <= 78)
+        }
+    }
+
+    @Test func animationIsInstantByDefaultAndCanBeEnabledThenDisabled() throws {
+        _ = NSApplication.shared
+        let panel = HistoryPanelController()
+        #expect(panel.window?.animationBehavior == NSWindow.AnimationBehavior.none)
+        panel.update(rows: makeRows(1), showPreviews: false, showSizes: true, status: nil,
+                     animationsEnabled: true)
+        #expect(panel.window?.animationBehavior == NSWindow.AnimationBehavior.utilityWindow)
+        panel.window?.alphaValue = 0.4
+        panel.update(rows: makeRows(1), showPreviews: false, showSizes: true, status: nil,
+                     animationsEnabled: false)
+        #expect(panel.window?.animationBehavior == NSWindow.AnimationBehavior.none)
+        #expect(panel.window?.alphaValue == 1)
     }
 }

@@ -37,12 +37,12 @@ public actor HistoryRepository {
             let previousCount = entries.count
             trim()
             if previousCount != entries.count {
-                pendingWarnings.append("Saved history was trimmed to the configured history limits.")
+                pendingWarnings.append(L10n.text("Saved history was trimmed to the configured history limits."))
             }
             // Removes skipped records and orphaned blobs only after a successful commit.
             try store.save(entries)
         } catch {
-            pendingWarnings.append("Saved history could not be fully loaded: \(error.localizedDescription)")
+            pendingWarnings.append(L10n.format("Saved history could not be fully loaded: %@", error.localizedDescription))
         }
         return entries
     }
@@ -60,7 +60,7 @@ public actor HistoryRepository {
         guard entry.byteCount <= configuration.maxBytes else {
             return HistoryUpdate(
                 entries: entries,
-                rejectedReason: "Clipboard entry exceeds the configured data budget; no formats were discarded."
+                rejectedReason: L10n.text("Clipboard entry exceeds the configured data budget; no formats were discarded.")
             )
         }
         if let index = entries.firstIndex(where: { $0.hasIdenticalContent(to: entry) }) {

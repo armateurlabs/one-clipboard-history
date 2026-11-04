@@ -9,7 +9,7 @@ enum HistoryPersistenceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .sqlite(let message): "History database error: \(message)"
+        case .sqlite(let message): L10n.format("History database error: %@", message)
         case .invalidStore(let message): message
         }
     }
@@ -49,7 +49,7 @@ final class HistoryPersistence {
             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil
         )
         guard status == SQLITE_OK, let handle else {
-            let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "Cannot open database."
+            let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? L10n.text("Cannot open database.")
             if let handle { sqlite3_close(handle) }
             throw HistoryPersistenceError.sqlite(message)
         }
@@ -61,7 +61,7 @@ final class HistoryPersistence {
             try execute("PRAGMA secure_delete=ON")
             let version = try scalarInteger("PRAGMA user_version")
             guard version == 0 || version == 1 else {
-                throw HistoryPersistenceError.invalidStore("Unsupported saved history version.")
+                throw HistoryPersistenceError.invalidStore(L10n.text("Unsupported saved history version."))
             }
             try execute("""
                 CREATE TABLE IF NOT EXISTS history (
@@ -96,7 +96,7 @@ final class HistoryPersistence {
             guard status == SQLITE_ROW else { throw databaseError() }
             do {
                 guard let id = UUID(uuidString: text(statement, 0)) else {
-                    throw HistoryPersistenceError.invalidStore("Invalid saved history identifier.")
+                    throw HistoryPersistenceError.invalidStore(L10n.text("Invalid saved history identifier."))
                 }
                 let filename = text(statement, 1)
                 let checksum = text(statement, 2)
@@ -104,16 +104,16 @@ final class HistoryPersistence {
                 try Self.requireRegularFile(url)
                 let data = try Data(contentsOf: url, options: .mappedIfSafe)
                 guard Self.checksum(data) == checksum else {
-                    throw HistoryPersistenceError.invalidStore("Saved history data failed its integrity check.")
+                    throw HistoryPersistenceError.invalidStore(L10n.text("Saved history data failed its integrity check."))
                 }
                 let entry = try PropertyListDecoder().decode(ClipboardEntry.self, from: data)
                 guard entry.id == id else {
-                    throw HistoryPersistenceError.invalidStore("Saved history identifier does not match its data.")
+                    throw HistoryPersistenceError.invalidStore(L10n.text("Saved history identifier does not match its data."))
                 }
                 entries.append(entry)
                 loadedRecords[id] = Record(entry: entry, filename: filename, checksum: checksum)
             } catch {
-                warnings.append("An unavailable or damaged saved clipboard entry was skipped.")
+                warnings.append(L10n.text("An unavailable or damaged saved clipboard entry was skipped."))
             }
         }
         records = loadedRecords
@@ -181,7 +181,7 @@ final class HistoryPersistence {
         guard manager.fileExists(atPath: directory.path) else { return }
         let attributes = try manager.attributesOfItem(atPath: directory.path)
         guard attributes[.type] as? FileAttributeType == .typeDirectory else {
-            throw HistoryPersistenceError.invalidStore("The history directory is not a regular directory.")
+            throw HistoryPersistenceError.invalidStore(L10n.text("The history directory is not a regular directory."))
         }
         for name in ["history.sqlite3", "history.sqlite3-wal", "history.sqlite3-shm", "history.sqlite3-journal", "blobs"] {
             let url = directory.appendingPathComponent(name)
@@ -194,7 +194,7 @@ final class HistoryPersistence {
         if manager.fileExists(atPath: url.path) {
             let attributes = try manager.attributesOfItem(atPath: url.path)
             guard attributes[.type] as? FileAttributeType == .typeDirectory else {
-                throw HistoryPersistenceError.invalidStore("A saved history path is not a regular directory.")
+                throw HistoryPersistenceError.invalidStore(L10n.text("A saved history path is not a regular directory."))
             }
         } else {
             try manager.createDirectory(at: url, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -205,7 +205,7 @@ final class HistoryPersistence {
     private static func requireRegularFile(_ url: URL) throws {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         guard attributes[.type] as? FileAttributeType == .typeRegular else {
-            throw HistoryPersistenceError.invalidStore("A saved history blob is not a regular file.")
+            throw HistoryPersistenceError.invalidStore(L10n.text("A saved history blob is not a regular file."))
         }
     }
 
@@ -215,7 +215,7 @@ final class HistoryPersistence {
 
     private func blobURL(_ filename: String) throws -> URL {
         guard filename.range(of: "^[a-f0-9-]{36}-[a-f0-9]{64}\\.entry$", options: .regularExpression) != nil else {
-            throw HistoryPersistenceError.invalidStore("Invalid saved history blob path.")
+            throw HistoryPersistenceError.invalidStore(L10n.text("Invalid saved history blob path."))
         }
         return blobsDirectory.appendingPathComponent(filename)
     }
@@ -256,6 +256,6 @@ final class HistoryPersistence {
     }
 
     private func databaseError() -> HistoryPersistenceError {
-        .sqlite(database.map { String(cString: sqlite3_errmsg($0)) } ?? "Database is not open.")
+        .sqlite(database.map { String(cString: sqlite3_errmsg($0)) } ?? L10n.text("Database is not open."))
     }
 }

@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import Combine
+import MCMCore
 
 struct KeyboardShortcut: Codable, Equatable, Sendable {
     var keyCode: UInt32
@@ -17,7 +18,7 @@ struct KeyboardShortcut: Codable, Equatable, Sendable {
         if modifiers & UInt32(optionKey) != 0 { result += "⌥" }
         if modifiers & UInt32(shiftKey) != 0 { result += "⇧" }
         if modifiers & UInt32(cmdKey) != 0 { result += "⌘" }
-        return result + keyLabel
+        return result + (keyCode == 49 ? L10n.text("Space") : keyLabel)
     }
 
     init(keyCode: UInt32, modifiers: UInt32, keyLabel: String) {
@@ -36,7 +37,7 @@ struct KeyboardShortcut: Codable, Equatable, Sendable {
         if flags.contains(.option) { modifiers |= UInt32(optionKey) }
         if flags.contains(.shift) { modifiers |= UInt32(shiftKey) }
         if flags.contains(.control) { modifiers |= UInt32(controlKey) }
-        let labels: [UInt16: String] = [36: "↩", 49: "Espace", 123: "←", 124: "→", 125: "↓", 126: "↑"]
+        let labels: [UInt16: String] = [36: "↩", 49: "Space", 123: "←", 124: "→", 125: "↓", 126: "↑"]
         keyLabel = labels[event.keyCode] ?? event.charactersIgnoringModifiers?.uppercased() ?? "\(event.keyCode)"
     }
 }
@@ -53,6 +54,15 @@ final class AppSettings: ObservableObject {
     @Published var hideAfterPasting: Bool { didSet { save() } }
     @Published var positionAtPointer: Bool { didSet { save() } }
     @Published var persistenceEnabled: Bool { didSet { save() } }
+    @Published var historyFontSize: Double {
+        didSet {
+            let normalized = Self.normalizedFontSize(historyFontSize)
+            if historyFontSize != normalized { historyFontSize = normalized }
+            save()
+        }
+    }
+    @Published var animationsEnabled: Bool { didSet { save() } }
+    @Published var language: AppLanguage { didSet { save() } }
     @Published var shortcut: KeyboardShortcut { didSet { save() } }
     @Published var shortcutError: String?
     var savedFrame: NSRect? {
@@ -65,7 +75,8 @@ final class AppSettings: ObservableObject {
         defaults.register(defaults: [
             "historyLimit": 20, "budgetMegabytes": 256, "showPreviews": true,
             "showSizes": true, "hideAfterPasting": true, "positionAtPointer": false,
-            "persistenceEnabled": false
+            "persistenceEnabled": false, "historyFontSize": 14.0,
+            "animationsEnabled": false, "language": AppLanguage.system.rawValue
         ])
         historyLimit = max(1, min(defaults.integer(forKey: "historyLimit"), 1_000_000))
         budgetMegabytes = max(1, min(defaults.integer(forKey: "budgetMegabytes"), 1_048_576))
@@ -74,6 +85,9 @@ final class AppSettings: ObservableObject {
         hideAfterPasting = defaults.bool(forKey: "hideAfterPasting")
         positionAtPointer = defaults.bool(forKey: "positionAtPointer")
         persistenceEnabled = defaults.bool(forKey: "persistenceEnabled")
+        historyFontSize = Self.normalizedFontSize(defaults.double(forKey: "historyFontSize"))
+        animationsEnabled = defaults.bool(forKey: "animationsEnabled")
+        language = defaults.string(forKey: "language").flatMap(AppLanguage.init(rawValue:)) ?? .system
         shortcut = defaults.data(forKey: "shortcut").flatMap { try? JSONDecoder().decode(KeyboardShortcut.self, from: $0) } ?? .initial
     }
 
@@ -85,8 +99,15 @@ final class AppSettings: ObservableObject {
         defaults.set(hideAfterPasting, forKey: "hideAfterPasting")
         defaults.set(positionAtPointer, forKey: "positionAtPointer")
         defaults.set(persistenceEnabled, forKey: "persistenceEnabled")
+        defaults.set(Self.normalizedFontSize(historyFontSize), forKey: "historyFontSize")
+        defaults.set(animationsEnabled, forKey: "animationsEnabled")
+        defaults.set(language.rawValue, forKey: "language")
         defaults.set(try? JSONEncoder().encode(shortcut), forKey: "shortcut")
         onChange?()
+    }
+
+    private static func normalizedFontSize(_ value: Double) -> Double {
+        value.isFinite ? min(28, max(10, value)) : 14
     }
 }
 

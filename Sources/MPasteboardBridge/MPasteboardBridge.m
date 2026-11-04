@@ -12,7 +12,7 @@
             *error = [NSError errorWithDomain:@"app.mcm.pasteboard.communication"
                                         code:1
                                     userInfo:@{NSLocalizedDescriptionKey:
-                                        @"Communication avec le presse-papiers interrompue. Une nouvelle capture sera tentée."}];
+                                        @"Clipboard communication was interrupted. Capture will be retried."}];
         }
         return NO;
     }

@@ -88,7 +88,7 @@ struct PasteboardTests {
         for (type, data) in [("public.utf8-plain-text", utf8), ("public.utf16-plain-text", utf16)] {
             let entry = ClipboardEntry(items: [.init(representations: [.init(type: type, data: data)])])
             let presentation = ClipboardPresentation.placeholder(for: entry)
-            #expect(presentation.typeName == "Texte brut")
+            #expect(presentation.typeName == L10n.text("Plain text"))
             #expect(presentation.title.unicodeScalars.first?.value == 0x41)
             #expect(!presentation.title.contains("\u{FFFD}"))
             #expect(!presentation.title.contains("🐍"))
@@ -270,7 +270,7 @@ struct PasteboardTests {
         ])])
         let presentation = ClipboardPresentation.make(for: entry)
         #expect(presentation.title.contains("def f():"))
-        #expect(presentation.typeName == "Texte brut")
+        #expect(presentation.typeName == L10n.text("Plain text"))
         #expect(entry.items[0].representations[0].data == bytes)
         #expect(entry.items[0].representations[1].data == metadata)
         #expect(presentation.displayByteCount == Int64(bytes.count + metadata.count))

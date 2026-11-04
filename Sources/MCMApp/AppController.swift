@@ -23,6 +23,8 @@ final class AppController {
     private var presentationCache: [UUID: ClipboardPresentation] = [:]
     private var cacheIncludesPreviews = true
     private var statusMessage: String?
+    private var statusError: (any Error)?
+    private var appliedLanguage: AppLanguage = .system
     private var operation: Task<Void, Never>?
     private var pasteOperation: Task<Void, Never>?
     private var presentationWorkers: [UUID: Task<Void, Never>] = [:]
@@ -43,6 +45,8 @@ final class AppController {
     init(demo: Bool) throws {
         self.demo = demo
         settings = AppSettings(defaults: demo ? UserDefaults(suiteName: "com.arthur.mcm.demo")! : .standard)
+        L10n.configure(settings.language)
+        appliedLanguage = settings.language
         let directory = demo
             ? FileManager.default.temporaryDirectory.appendingPathComponent("mcm-demo-\(UUID().uuidString)", isDirectory: true)
             : FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -55,6 +59,8 @@ final class AppController {
     }
 
     func start() {
+        panel.refreshLocalization()
+        render()
         panel.onPaste = { [weak self] in self?.paste(id: $0) }
         panel.onSettings = { [weak self] in self?.showSettings() }
         panel.onMoved = { [weak self] frame in
@@ -103,7 +109,7 @@ final class AppController {
                     restartCapture()
                 }
             } catch {
-                setStatus("Impossible de charger l’historique : \(error.localizedDescription)")
+                setStatus("Could not load history: %@", error: error)
                 restartCapture()
             }
         }
@@ -148,11 +154,11 @@ final class AppController {
                 let update = try await repository.insert(entry)
                 await refresh(update.entries)
                 if let reason = update.rejectedReason { setStatus(reason) }
-                else if !entry.isComplete { setStatus("Capture incomplète : certains formats n’ont pas pu être conservés.") }
+                else if !entry.isComplete { setStatus("Incomplete capture: some formats could not be preserved.") }
                 else { setStatus(nil) }
             } catch {
                 await refresh(await repository.currentEntries())
-                setStatus("Historique en mémoire ; sauvegarde impossible : \(error.localizedDescription)")
+                setStatus("History is in memory; saving failed: %@", error: error)
             }
         }
     }
@@ -206,10 +212,18 @@ final class AppController {
     }
 
     private func render() {
-        panel.update(rows: rows, showPreviews: settings.showPreviews, showSizes: settings.showSizes, status: statusMessage)
+        let status = statusMessage.map { key in
+            statusError.map { L10n.format(key, $0.localizedDescription) } ?? L10n.text(key)
+        }
+        panel.update(rows: rows, showPreviews: settings.showPreviews, showSizes: settings.showSizes,
+                     status: status, fontSize: settings.historyFontSize, animationsEnabled: settings.animationsEnabled)
     }
 
-    private func setStatus(_ message: String?) { statusMessage = message; render() }
+    private func setStatus(_ message: String?, error: (any Error)? = nil) {
+        statusMessage = message
+        statusError = error
+        render()
+    }
 
     func toggle() {
         guard !shuttingDown else { return }
@@ -231,7 +245,7 @@ final class AppController {
     private func paste(id: UUID) {
         guard !shuttingDown, !pasteInProgress, let entry = entries.first(where: { $0.id == id }) else { return }
         guard entry.isComplete else {
-            setStatus("Collage interrompu : la capture de cette entrée est incomplète.")
+            setStatus("Paste stopped: this entry was not captured completely.")
             return
         }
         pasteInProgress = true
@@ -242,8 +256,8 @@ final class AppController {
             let canPaste = !demo && CGPreflightPostEventAccess() && target?.isTerminated == false
             if !canPaste {
                 guard await copy(entry) else { return }
-                setStatus(demo ? "Mode de démonstration : copie sur un presse-papiers privé."
-                    : "Entrée copiée. Autorisez le collage dans les réglages ou collez avec ⌘V.")
+                setStatus(demo ? "Preview mode: copied to a private clipboard."
+                    : "Entry copied. Allow automatic paste in Settings or paste with ⌘V.")
                 if !demo, let target, !target.isTerminated {
                     if settings.hideAfterPasting { panel.hide() }
                     panel.window?.resignKey()
@@ -267,7 +281,7 @@ final class AppController {
             }
             guard ready else {
                 if await copy(entry) {
-                    setStatus("Entrée copiée. Retour à l’application impossible ; collez avec ⌘V.")
+                    setStatus("Entry copied. Could not return to the previous app; paste with ⌘V.")
                     await promoteCopiedEntry(id: id)
                 }
                 panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
@@ -278,7 +292,7 @@ final class AppController {
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier,
                   let down = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true),
                   let up = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: false) else {
-                setStatus("Collage interrompu : l’application cible a changé.")
+                setStatus("Paste stopped: the target app changed.")
                 panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
                 return
             }
@@ -290,7 +304,7 @@ final class AppController {
             }
             guard NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier,
                   CGPreflightPostEventAccess() else {
-                setStatus("Entrée copiée ; collez avec ⌘V.")
+                setStatus("Entry copied; paste with ⌘V.")
                 panel.show(positionAtPointer: settings.positionAtPointer, savedFrame: settings.savedFrame)
                 await promoteCopiedEntry(id: id)
                 return
@@ -306,19 +320,33 @@ final class AppController {
 
     private func copy(_ entry: ClipboardEntry) async -> Bool {
         do { try await pasteboard.write(entry); return true }
-        catch { setStatus("Collage impossible : \(error.localizedDescription)"); return false }
+        catch { setStatus("Could not paste: %@", error: error); return false }
     }
 
     private func promoteCopiedEntry(id: UUID) async {
         do { await refresh(try await repository.promote(id: id)) }
         catch {
             await refresh(await repository.currentEntries())
-            setStatus("Entrée copiée ; sauvegarde de l’historique impossible : \(error.localizedDescription)")
+            setStatus("Entry copied; could not save history: %@", error: error)
         }
     }
 
     private func settingsDidChange() {
         guard !shuttingDown else { return }
+        if appliedLanguage != settings.language {
+            L10n.configure(settings.language)
+            appliedLanguage = settings.language
+            presentationCache.removeAll()
+            for worker in presentationWorkers.values { worker.cancel() }
+            presentationWorkers.removeAll()
+            presentationGeneration += 1
+            panel.refreshLocalization()
+            settingsWindow?.window?.title = L10n.text("mcm Settings")
+            buildMenu()
+            rebuildRows()
+        }
+        render()
+        settingsWindow?.window?.animationBehavior = settings.animationsEnabled ? .default : .none
         configureHotkey()
         let config = HistoryConfiguration(maxCount: max(1, settings.historyLimit),
                                            maxBytes: Int64(max(1, min(settings.budgetMegabytes, 1_048_576))) * 1_048_576)
@@ -332,7 +360,7 @@ final class AppController {
             do { await refresh(try await repository.configure(config, persistenceEnabled: persistent)) }
             catch {
                 await refresh(await repository.currentEntries())
-                setStatus("Réglage de sauvegarde impossible : \(error.localizedDescription)")
+                setStatus("Could not change history storage: %@", error: error)
             }
         }
     }
@@ -343,8 +371,8 @@ final class AppController {
             activeShortcut = settings.shortcut
             settings.shortcutError = nil
         } else {
-            settings.shortcutError = "Raccourci indisponible. Le précédent reste actif."
-            setStatus("Raccourci indisponible : modifiez-le dans les réglages.")
+            settings.shortcutError = "Shortcut unavailable. The previous shortcut remains active."
+            setStatus("Shortcut unavailable: choose another one in Settings.")
         }
     }
 
@@ -357,8 +385,9 @@ final class AppController {
                     }
                 }, onClear: { [weak self] in self?.confirmClear() })
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
-            window.title = "Réglages de mcm"
+            window.title = L10n.text("mcm Settings")
             window.styleMask = [.titled, .closable]
+            window.animationBehavior = settings.animationsEnabled ? .default : .none
             window.center()
             window.isReleasedWhenClosed = false
             settingsWindow = NSWindowController(window: window)
@@ -379,21 +408,21 @@ final class AppController {
         enqueue { [weak self] in
             guard let self else { return }
             do { await refresh(try await repository.remove(id: id)) }
-            catch { setStatus("Suppression impossible : \(error.localizedDescription)") }
+            catch { setStatus("Could not remove entry: %@", error: error) }
         }
     }
 
     private func confirmClear() {
         let alert = NSAlert()
-        alert.messageText = "Effacer l’historique ?"
-        alert.informativeText = "Les entrées de mcm seront supprimées. Les fichiers d’origine seront conservés."
-        alert.addButton(withTitle: "Effacer")
-        alert.addButton(withTitle: "Annuler")
+        alert.messageText = L10n.text("Clear history?")
+        alert.informativeText = L10n.text("mcm entries will be removed. Original files will be kept.")
+        alert.addButton(withTitle: L10n.text("Clear"))
+        alert.addButton(withTitle: L10n.text("Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         enqueue { [weak self] in
             guard let self else { return }
             do { await refresh(try await repository.clear()); setStatus(nil) }
-            catch { setStatus("Effacement impossible : \(error.localizedDescription)") }
+            catch { setStatus("Could not clear history: %@", error: error) }
         }
     }
 
@@ -401,32 +430,32 @@ final class AppController {
         let main = NSMenu()
         let applicationItem = NSMenuItem()
         let applicationMenu = NSMenu(title: "mcm")
-        applicationMenu.addItem(withTitle: "À propos de mcm", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        applicationMenu.addItem(withTitle: L10n.text("About mcm"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         applicationMenu.addItem(.separator())
-        applicationMenu.addItem(withTitle: "Réglages…", action: #selector(menuSettings), keyEquivalent: ",").target = self
+        applicationMenu.addItem(withTitle: L10n.text("Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         applicationMenu.addItem(.separator())
-        applicationMenu.addItem(withTitle: "Masquer mcm", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        applicationMenu.addItem(withTitle: "Quitter mcm", action: #selector(menuQuit), keyEquivalent: "q").target = self
+        applicationMenu.addItem(withTitle: L10n.text("Hide mcm"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        applicationMenu.addItem(withTitle: L10n.text("Quit mcm"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         applicationItem.submenu = applicationMenu
         main.addItem(applicationItem)
         let editItem = NSMenuItem()
-        let editMenu = NSMenu(title: "Édition")
-        editMenu.addItem(withTitle: "Annuler", action: Selector(("undo:")), keyEquivalent: "z")
+        let editMenu = NSMenu(title: L10n.text("Edit"))
+        editMenu.addItem(withTitle: L10n.text("Undo"), action: Selector(("undo:")), keyEquivalent: "z")
         editMenu.addItem(.separator())
-        editMenu.addItem(withTitle: "Couper", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        editMenu.addItem(withTitle: "Copier", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        editMenu.addItem(withTitle: "Coller", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        editMenu.addItem(withTitle: "Tout sélectionner", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: L10n.text("Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: L10n.text("Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: L10n.text("Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: L10n.text("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = editMenu
         main.addItem(editItem)
         NSApp.mainMenu = main
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = statusItem ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "clipboard", accessibilityDescription: "mcm")
         let menu = NSMenu()
-        menu.addItem(withTitle: "Afficher l’historique", action: #selector(menuShow), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Réglages…", action: #selector(menuSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: L10n.text("Show History"), action: #selector(menuShow), keyEquivalent: "").target = self
+        menu.addItem(withTitle: L10n.text("Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quitter mcm", action: #selector(menuQuit), keyEquivalent: "q").target = self
+        menu.addItem(withTitle: L10n.text("Quit mcm"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         item.menu = menu
         statusItem = item
     }

@@ -7,13 +7,15 @@
     <key>CFBundleIdentifier</key><string>com.arthur.mcm</string>
     <key>CFBundleExecutable</key><string>mcm</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleShortVersionString</key><string>0.2.0</string>
+    <key>CFBundleVersion</key><string>2</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string><string>fr</string></array>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSUIElement</key><true/>
     <key>LSMinimumSystemVersion</key><string>27.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
-    <key>NSPasteboardUsageDescription</key><string>mcm conserve vos copies dans un historique local pour vous permettre de les coller à nouveau.</string>
+    <key>NSPasteboardUsageDescription</key><string>mcm keeps your copies in a local history so you can paste them again.</string>
 </dict>
 </plist>

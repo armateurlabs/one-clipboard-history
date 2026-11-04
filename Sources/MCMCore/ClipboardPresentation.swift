@@ -25,13 +25,13 @@ public struct ClipboardPresentation: Sendable {
     private static func build(for entry: ClipboardEntry, includeThumbnail: Bool, includeFileMetadata: Bool) -> Self {
         let representations = entry.items.flatMap(\.representations)
         let files = fileURLs(for: entry)
-        let source = entry.sourceAppName.map { "Copié depuis \($0)" } ?? "Application source inconnue"
-        let warning = entry.isComplete ? source : "Capture incomplète · \(source)"
+        let source = entry.sourceAppName.map { L10n.format("Copied from %@", $0) } ?? L10n.text("Unknown source application")
+        let warning = entry.isComplete ? source : L10n.format("Incomplete capture · %@", source)
         if !files.isEmpty {
             let count = files.count
-            let title = count == 1 ? files[0].lastPathComponent : "\(count) fichiers · \(files.prefix(3).map(\.lastPathComponent).joined(separator: ", "))"
+            let title = count == 1 ? files[0].lastPathComponent : L10n.format("%ld files · %@", count, files.prefix(3).map(\.lastPathComponent).joined(separator: ", "))
             guard includeFileMetadata else {
-                return .init(title: title, detail: warning, typeName: count == 1 ? "Fichier" : "\(count) fichiers", displayByteCount: -1, thumbnailData: nil, fileURLs: files)
+                return .init(title: title, detail: warning, typeName: count == 1 ? L10n.text("File") : L10n.format("%ld files", count), displayByteCount: -1, thumbnailData: nil, fileURLs: files)
             }
             let bytes = files.reduce(Int64(0)) { result, url in
                 guard result >= 0 else { return -1 }
@@ -41,9 +41,9 @@ public struct ClipboardPresentation: Sendable {
             }
             let type: String
             if files.count == 1, let uniformType = try? files[0].resourceValues(forKeys: [.contentTypeKey]).contentType {
-                type = uniformType.localizedDescription ?? "Fichier"
+                type = uniformType.preferredFilenameExtension.map { L10n.format("%@ file", $0.uppercased()) } ?? L10n.text("File")
             } else {
-                type = count == 1 ? "Fichier" : "\(count) fichiers"
+                type = count == 1 ? L10n.text("File") : L10n.format("%ld files", count)
             }
             let preview: Data?
             if includeThumbnail {
@@ -66,26 +66,25 @@ public struct ClipboardPresentation: Sendable {
         let typeName: String
         if let image {
             let uniformType = UTType(image.type)
-            let name = uniformType?.preferredFilenameExtension?.uppercased() ?? "Image"
-            title = "Image \(name)"
-            typeName = uniformType?.localizedDescription ?? image.type
+            title = uniformType?.preferredFilenameExtension.map { L10n.format("%@ image", $0.uppercased()) } ?? L10n.text("Image")
+            typeName = title
         } else if let plainText {
             let readable = plainText.replacingOccurrences(of: "\r\n", with: " ")
                 .replacingOccurrences(of: "\n", with: " ")
                 .replacingOccurrences(of: "\r", with: " ")
                 .replacingOccurrences(of: "\t", with: "    ")
-            title = readable.isEmpty ? "Texte vide" : String(readable.prefix(300))
-            typeName = html ? "Texte HTML" : rich ? "Texte enrichi" : "Texte brut"
+            title = readable.isEmpty ? L10n.text("Empty text") : String(readable.prefix(300))
+            typeName = html ? L10n.text("HTML text") : rich ? L10n.text("Rich text") : L10n.text("Plain text")
         } else if html {
-            title = "Contenu HTML"
-            typeName = "Texte HTML"
+            title = L10n.text("HTML content")
+            typeName = L10n.text("HTML text")
         } else if rich {
-            title = "Contenu avec mise en forme"
-            typeName = "Texte enrichi"
+            title = L10n.text("Formatted content")
+            typeName = L10n.text("Rich text")
         } else {
-            let firstType = representations.first?.type ?? "Format indisponible"
+            let firstType = representations.first?.type ?? L10n.text("Unavailable format")
             title = UTType(firstType)?.localizedDescription ?? firstType
-            typeName = entry.items.count > 1 ? "\(entry.items.count) éléments" : firstType
+            typeName = entry.items.count > 1 ? L10n.format("%ld items", entry.items.count) : firstType
         }
         let preview = includeThumbnail ? image.flatMap { thumbnail(from: $0.data) } : nil
         return .init(title: title, detail: warning, typeName: typeName, displayByteCount: entry.byteCount, thumbnailData: preview, fileURLs: [])

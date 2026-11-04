@@ -15,10 +15,13 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     private let scrollView = NSScrollView()
     private let statusContainer = NSView()
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
-    private let emptyLabel = NSTextField(wrappingLabelWithString: "L’historique est vide.\nLes prochaines copies apparaîtront ici.")
+    private let emptyLabel = NSTextField(wrappingLabelWithString: "")
+    private var settingsButton: NSButton?
     private var rows: [HistoryRow] = []
     private var showPreviews = true
     private var showSizes = true
+    private var fontSize: CGFloat = 14
+    private var rowHeight: CGFloat = 56
     private var positioningWindow = false
     private var didPositionWindow = false
     private var contextEntryID: UUID?
@@ -34,7 +37,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
             defer: false
         )
         super.init(window: historyPanel)
-        historyPanel.title = "Historique du presse-papiers"
+        historyPanel.title = L10n.text("Clipboard History")
         historyPanel.minSize = NSSize(width: 380, height: 280)
         historyPanel.isReleasedWhenClosed = false
         historyPanel.isFloatingPanel = true
@@ -42,12 +45,13 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         historyPanel.hidesOnDeactivate = false
         historyPanel.becomesKeyOnlyIfNeeded = false
         historyPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        historyPanel.animationBehavior = .utilityWindow
+        historyPanel.animationBehavior = .none
         historyPanel.delegate = self
         historyPanel.handleKey = { [weak self] event in self?.handleKey(event) ?? false }
         table.handleKey = { [weak self] event in self?.handleKey(event) ?? false }
         configureContent()
         configureTitlebar()
+        refreshLocalization()
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -59,12 +63,20 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
 
     required init?(coder: NSCoder) { nil }
 
-    func update(rows newRows: [HistoryRow], showPreviews: Bool, showSizes: Bool, status: String?) {
+    func update(rows newRows: [HistoryRow], showPreviews: Bool, showSizes: Bool, status: String?,
+                fontSize: Double = 14, animationsEnabled: Bool = false) {
         let previousIndex = table.selectedRow
         let previousID = rows.indices.contains(previousIndex) ? rows[previousIndex].entry.id : nil
         rows = newRows
         self.showPreviews = showPreviews
         self.showSizes = showSizes
+        self.fontSize = Self.validFontSize(fontSize)
+        rowHeight = max(56, ceil(self.fontSize * 2 + 22))
+        table.rowHeight = rowHeight
+        historyPanel.animationBehavior = animationsEnabled ? .utilityWindow : .none
+        historyPanel.alphaValue = 1
+        statusLabel.font = .systemFont(ofSize: max(10, self.fontSize - 2))
+        emptyLabel.font = .systemFont(ofSize: self.fontSize)
         table.reloadData()
         emptyLabel.isHidden = !rows.isEmpty
         if !rows.isEmpty {
@@ -75,6 +87,15 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         statusLabel.stringValue = status ?? ""
         statusContainer.isHidden = status?.isEmpty != false
         statusLabel.toolTip = status
+    }
+
+    func refreshLocalization() {
+        historyPanel.title = L10n.text("Clipboard History")
+        table.setAccessibilityLabel(L10n.text("Clipboard History"))
+        emptyLabel.stringValue = L10n.text("History is empty.\nYour next copies will appear here.")
+        settingsButton?.setAccessibilityLabel(L10n.text("Settings"))
+        settingsButton?.toolTip = L10n.text("Settings (⌘,)")
+        table.reloadData()
     }
 
     func show(positionAtPointer: Bool, savedFrame: NSRect?) {
@@ -96,7 +117,8 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
             )
         }
         frame = clamped(frame, preferredScreen: positionAtPointer ? screen : nil)
-        historyPanel.setFrame(frame, display: false)
+        historyPanel.setFrame(frame, display: false, animate: false)
+        historyPanel.alphaValue = 1
         didPositionWindow = true
         if historyPanel.isMiniaturized { historyPanel.deminiaturize(nil) }
         historyPanel.makeKeyAndOrderFront(nil)
@@ -149,7 +171,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         table.delegate = self
         table.target = self
         table.doubleAction = #selector(doubleClicked)
-        table.setAccessibilityLabel("Historique du presse-papiers")
+        table.setAccessibilityLabel(L10n.text("Clipboard History"))
         let contextMenu = NSMenu()
         contextMenu.delegate = self
         table.menu = contextMenu
@@ -200,16 +222,17 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         accessory.layoutAttribute = .right
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 36, height: 28))
         let button = NSButton(
-            image: NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Réglages")!,
+            image: NSImage(systemSymbolName: "gearshape", accessibilityDescription: L10n.text("Settings"))!,
             target: self,
             action: #selector(openSettings)
         )
         button.bezelStyle = .accessoryBarAction
         button.isBordered = false
-        button.toolTip = "Réglages (⌘,)"
-        button.setAccessibilityLabel("Réglages")
+        button.toolTip = L10n.text("Settings (⌘,)")
+        button.setAccessibilityLabel(L10n.text("Settings"))
         button.frame = NSRect(x: 1, y: 2, width: 28, height: 24)
         container.addSubview(button)
+        settingsButton = button
         accessory.view = container
         historyPanel.addTitlebarAccessoryViewController(accessory)
     }
@@ -221,11 +244,12 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         let identifier = NSUserInterfaceItemIdentifier("historyCell")
         let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? HistoryCellView ?? HistoryCellView()
         cell.identifier = identifier
-        cell.configure(row: rows[row], rank: row + 1, showPreview: showPreviews, showSize: showSizes)
+        cell.configure(row: rows[row], rank: row + 1, showPreview: showPreviews, showSize: showSizes,
+                       fontSize: fontSize, rowHeight: rowHeight)
         return cell
     }
 
-    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 56 }
+    func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { rowHeight }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         hide()
@@ -252,12 +276,12 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         let selected = rows.indices.contains(clicked) ? clicked : table.selectedRow
         contextEntryID = rows.indices.contains(selected) ? rows[selected].entry.id : nil
         if contextEntryID != nil {
-            let delete = NSMenuItem(title: "Supprimer cette entrée", action: #selector(deleteContextEntry), keyEquivalent: "")
+            let delete = NSMenuItem(title: L10n.text("Delete This Entry"), action: #selector(deleteContextEntry), keyEquivalent: "")
             delete.target = self
             menu.addItem(delete)
             menu.addItem(.separator())
         }
-        let clear = NSMenuItem(title: "Effacer l’historique…", action: #selector(clearHistory), keyEquivalent: "")
+        let clear = NSMenuItem(title: L10n.text("Clear History…"), action: #selector(clearHistory), keyEquivalent: "")
         clear.target = self
         clear.isEnabled = !rows.isEmpty
         menu.addItem(clear)
@@ -321,7 +345,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         guard didPositionWindow else { return }
         positioningWindow = true
         let newFrame = clamped(historyPanel.frame)
-        historyPanel.setFrame(newFrame, display: historyPanel.isVisible)
+        historyPanel.setFrame(newFrame, display: historyPanel.isVisible, animate: false)
         positioningWindow = false
         onResized?(newFrame)
     }
@@ -345,6 +369,10 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     private static func isUsable(_ rect: NSRect) -> Bool {
         rect.origin.x.isFinite && rect.origin.y.isFinite && rect.width.isFinite && rect.height.isFinite
             && rect.width > 0 && rect.height > 0
+    }
+
+    private static func validFontSize(_ value: Double) -> CGFloat {
+        value.isFinite ? CGFloat(min(28, max(10, value))) : 14
     }
 }
 
@@ -375,6 +403,10 @@ private final class HistoryCellView: NSTableCellView {
     private let titleLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(labelWithString: "")
     private let sizeLabel = NSTextField(labelWithString: "")
+    private var numberWidth: NSLayoutConstraint!
+    private var numberHeight: NSLayoutConstraint!
+    private var previewWidth: NSLayoutConstraint!
+    private var previewHeight: NSLayoutConstraint!
 
     override var backgroundStyle: NSView.BackgroundStyle {
         didSet {
@@ -417,15 +449,19 @@ private final class HistoryCellView: NSTableCellView {
         addSubview(preview)
         addSubview(labels)
         textField = titleLabel
+        numberWidth = numberPill.widthAnchor.constraint(equalToConstant: 32)
+        numberHeight = numberPill.heightAnchor.constraint(equalToConstant: 46)
+        previewWidth = preview.widthAnchor.constraint(equalToConstant: 40)
+        previewHeight = preview.heightAnchor.constraint(equalToConstant: 40)
         NSLayoutConstraint.activate([
             numberPill.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
             numberPill.centerYAnchor.constraint(equalTo: centerYAnchor),
-            numberPill.widthAnchor.constraint(equalToConstant: 32),
-            numberPill.heightAnchor.constraint(equalToConstant: 46),
+            numberWidth,
+            numberHeight,
             preview.leadingAnchor.constraint(equalTo: numberPill.trailingAnchor, constant: 10),
             preview.centerYAnchor.constraint(equalTo: centerYAnchor),
-            preview.widthAnchor.constraint(equalToConstant: 40),
-            preview.heightAnchor.constraint(equalToConstant: 40),
+            previewWidth,
+            previewHeight,
             labels.leadingAnchor.constraint(equalTo: preview.trailingAnchor, constant: 12),
             labels.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             labels.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -436,19 +472,30 @@ private final class HistoryCellView: NSTableCellView {
 
     required init?(coder: NSCoder) { nil }
 
-    func configure(row: HistoryRow, rank: Int, showPreview: Bool, showSize: Bool) {
+    func configure(row: HistoryRow, rank: Int, showPreview: Bool, showSize: Bool,
+                   fontSize: CGFloat, rowHeight: CGFloat) {
         numberPill.number = rank
+        numberPill.fontSize = fontSize
+        numberWidth.constant = max(32, ceil(fontSize * 2))
+        numberHeight.constant = rowHeight - 10
+        let previewSide = min(48, max(40, ceil(fontSize * 1.6)))
+        previewWidth.constant = previewSide
+        previewHeight.constant = previewSide
+        titleLabel.font = .systemFont(ofSize: fontSize)
+        detailLabel.font = .systemFont(ofSize: max(10, fontSize - 2))
+        sizeLabel.font = detailLabel.font
         titleLabel.stringValue = row.presentation.title
         var details = [row.presentation.typeName]
         let comment = row.presentation.detail
         if !comment.isEmpty, comment != row.presentation.typeName { details.append(comment) }
         if let source = row.entry.sourceAppName, !details.joined().localizedCaseInsensitiveContains(source) {
-            details.append("Copié depuis \(source)")
+            details.append(L10n.format("Copied from %@", source))
         }
-        if !row.entry.isComplete, !details.joined().contains("Capture incomplète") { details.append("Capture incomplète") }
+        let incomplete = L10n.text("Incomplete Capture")
+        if !row.entry.isComplete, !details.joined().localizedCaseInsensitiveContains(incomplete) { details.append(incomplete) }
         detailLabel.stringValue = details.filter { !$0.isEmpty }.joined(separator: " · ")
         sizeLabel.stringValue = row.presentation.displayByteCount < 0 ? "…"
-            : ByteCountFormatter.string(fromByteCount: row.presentation.displayByteCount, countStyle: .file)
+            : ByteCountFormatStyle(style: .file, spellsOutZero: false, locale: L10n.currentLocale).format(row.presentation.displayByteCount)
         sizeLabel.isHidden = !showSize
         toolTip = "\(row.presentation.title)\n\(detailLabel.stringValue)\(showSize ? " · " + sizeLabel.stringValue : "")"
         if showPreview, let data = row.presentation.thumbnailData, let image = NSImage(data: data) {
@@ -468,13 +515,14 @@ private final class HistoryCellView: NSTableCellView {
 private final class NumberPillView: NSView {
     var number = 1 { didSet { needsDisplay = true } }
     var emphasized = false { didSet { needsDisplay = true } }
+    var fontSize: CGFloat = 14 { didSet { needsDisplay = true } }
 
     override func draw(_ dirtyRect: NSRect) {
         let fill = emphasized ? NSColor.white.withAlphaComponent(0.14) : NSColor.quaternaryLabelColor
         fill.setFill()
         NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill()
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.monospacedDigitSystemFont(ofSize: 14, weight: .regular),
+            .font: NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .regular),
             .foregroundColor: emphasized ? NSColor.alternateSelectedControlTextColor : NSColor.labelColor
         ]
         let value = String(number) as NSString
