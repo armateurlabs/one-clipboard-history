@@ -29,6 +29,7 @@ struct SettingsTests {
         #expect(settings.budgetMegabytes == 256)
         #expect(settings.showPreviews)
         #expect(settings.showSizes)
+        #expect(settings.compactView)
         #expect(settings.hideAfterPasting)
         #expect(!settings.positionAtPointer)
         #expect(settings.pointerQuadrant == .bottomRight)
@@ -183,5 +184,39 @@ struct SettingsTests {
         let settings = AppSettings(defaults: defaults)
         #expect(settings.pointerQuadrant == .bottomRight)
         #expect(settings.historyFontSize == 22)
+    }
+
+    @Test func compactViewDefaultsOnForExistingPreferencesWithoutChangingContentSizes() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(22.0, forKey: "historyFontSize")
+        defaults.set(true, forKey: "showPreviews")
+        defaults.set(45, forKey: "historyLimit")
+
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.compactView)
+        #expect(settings.historyFontSize == 22)
+        #expect(settings.showPreviews)
+        #expect(settings.historyLimit == 45)
+    }
+
+    @Test func compactViewPersistsAndNotifiesWithoutChangingTextOrPreviews() {
+        let (name, defaults) = isolatedDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(18.0, forKey: "historyFontSize")
+        defaults.set(false, forKey: "showPreviews")
+        let settings = AppSettings(defaults: defaults)
+        var changes = 0
+        settings.onChange = { changes += 1 }
+
+        for compact in [false, true] {
+            settings.compactView = compact
+            let reloaded = AppSettings(defaults: defaults)
+            #expect(reloaded.compactView == compact)
+            #expect(defaults.bool(forKey: "compactView") == compact)
+            #expect(reloaded.historyFontSize == 18)
+            #expect(!reloaded.showPreviews)
+        }
+        #expect(changes == 2)
     }
 }

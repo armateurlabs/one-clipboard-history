@@ -60,6 +60,7 @@ final class AppSettings: ObservableObject {
     @Published var budgetMegabytes: Int { didSet { save() } }
     @Published var showPreviews: Bool { didSet { save() } }
     @Published var showSizes: Bool { didSet { save() } }
+    @Published var compactView: Bool { didSet { save() } }
     @Published var hideAfterPasting: Bool { didSet { save() } }
     @Published var positionAtPointer: Bool { didSet { save() } }
     @Published var pointerQuadrant: PointerQuadrant { didSet { save() } }
@@ -84,7 +85,7 @@ final class AppSettings: ObservableObject {
         self.defaults = defaults
         defaults.register(defaults: [
             "historyLimit": 20, "budgetMegabytes": 256, "showPreviews": true,
-            "showSizes": true, "hideAfterPasting": true, "positionAtPointer": false,
+            "showSizes": true, "compactView": true, "hideAfterPasting": true, "positionAtPointer": false,
             "persistenceEnabled": false, "historyFontSize": 12.0,
             "pointerQuadrant": PointerQuadrant.bottomRight.rawValue,
             "animationsEnabled": false, "language": AppLanguage.system.rawValue
@@ -93,6 +94,7 @@ final class AppSettings: ObservableObject {
         budgetMegabytes = max(1, min(defaults.integer(forKey: "budgetMegabytes"), 1_048_576))
         showPreviews = defaults.bool(forKey: "showPreviews")
         showSizes = defaults.bool(forKey: "showSizes")
+        compactView = defaults.bool(forKey: "compactView")
         hideAfterPasting = defaults.bool(forKey: "hideAfterPasting")
         positionAtPointer = defaults.bool(forKey: "positionAtPointer")
         pointerQuadrant = defaults.string(forKey: "pointerQuadrant").flatMap(PointerQuadrant.init(rawValue:)) ?? .bottomRight
@@ -108,6 +110,7 @@ final class AppSettings: ObservableObject {
         defaults.set(max(1, min(budgetMegabytes, 1_048_576)), forKey: "budgetMegabytes")
         defaults.set(showPreviews, forKey: "showPreviews")
         defaults.set(showSizes, forKey: "showSizes")
+        defaults.set(compactView, forKey: "compactView")
         defaults.set(hideAfterPasting, forKey: "hideAfterPasting")
         defaults.set(positionAtPointer, forKey: "positionAtPointer")
         defaults.set(pointerQuadrant.rawValue, forKey: "pointerQuadrant")

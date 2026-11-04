@@ -143,7 +143,7 @@ struct HistoryPanelTests {
         _ = NSApplication.shared
         let panel = HistoryPanelController()
         let rows = makeRows(2)
-        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 24)
+        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 24, compactView: false)
         let table = try #require(findTable(in: panel.window?.contentView))
         let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
         let fonts = textFields(in: cell).compactMap { $0.font?.pointSize }
@@ -154,7 +154,7 @@ struct HistoryPanelTests {
         #expect(fonts.contains(22))
         #expect(fonts.allSatisfy { $0 == 24 || $0 == 22 })
 
-        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 10)
+        panel.update(rows: rows, showPreviews: false, showSizes: true, status: nil, fontSize: 10, compactView: false)
         let small = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
         #expect(table.rowHeight == 56)
         #expect(small.textField?.font?.pointSize == 10)
@@ -171,7 +171,7 @@ struct HistoryPanelTests {
             let cell = try #require(panel.tableView(table, viewFor: table.tableColumns.first, row: 0) as? NSTableCellView)
             #expect(cell.textField?.font?.pointSize == CGFloat(expected))
             #expect(table.rowHeight.isFinite)
-            #expect(table.rowHeight >= 56 && table.rowHeight <= 78)
+            #expect(table.rowHeight >= 44 && table.rowHeight <= 78)
         }
     }
 

@@ -216,7 +216,8 @@ final class AppController {
             statusError.map { L10n.format(key, $0.localizedDescription) } ?? L10n.text(key)
         }
         panel.update(rows: rows, showPreviews: settings.showPreviews, showSizes: settings.showSizes,
-                     status: status, fontSize: settings.historyFontSize, animationsEnabled: settings.animationsEnabled)
+                     status: status, fontSize: settings.historyFontSize, animationsEnabled: settings.animationsEnabled,
+                     compactView: settings.compactView)
     }
 
     private func setStatus(_ message: String?, error: (any Error)? = nil) {

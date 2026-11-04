@@ -38,6 +38,9 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section(L10n.text("Appearance")) {
+                Toggle(L10n.text("Compact view"), isOn: $settings.compactView)
+                Text(L10n.text("Fit rows to their content without changing text or preview size."))
+                    .font(.caption).foregroundStyle(.secondary)
                 LabeledContent(L10n.text("History font size")) {
                     HStack(spacing: 12) {
                         Slider(value: $settings.historyFontSize, in: 10...28, step: 1)

@@ -1,6 +1,6 @@
 # Validation de mcm — 4 novembre 2026
 
-État de validation de la version personnelle 0.3.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **68 tests**, dont 40 sur les données, la persistance et la localisation et 28 sur AppKit, les réglages, le placement et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
+État de validation de la version personnelle 0.4.0, destinée à macOS 27 sur Apple Silicon. La compilation release et la vérification de signature locale ont réussi. La suite complète passe : **74 tests**, dont 40 sur les données, la persistance et la localisation et 34 sur AppKit, les réglages, le placement et le routage Carbon du raccourci. Ce document distingue ces vérifications des interactions qui demandent encore une recette dans les applications réelles.
 
 ## Contrôles automatisés
 
@@ -24,6 +24,7 @@ Les contrôles implémentés et exercés couvrent :
 - Préférences initiales, restauration de la fenêtre et des réglages, normalisation des limites numériques avant calcul et repli après un raccourci enregistré invalide.
 - Police de 10 à 28 points, taille et hauteur des lignes cohérentes, valeurs non finies normalisées et préférences conservées au redémarrage.
 - Police initiale à 12 points et largeur minimale de 280 points ; les tailles de police déjà choisies restent conservées.
+- Vue compacte initialement activée, préférence conservée ; hauteur mesurée sur les contrôles natifs sans réduire les polices ni les dimensions des aperçus. Tests de cellules réellement mises en page à 10, 12, 24 et 28 points, avec PNG, insets verticaux, sélection et collage au clavier conservés lors de la bascule.
 - Quatre quadrants autour du pointeur, bas à droite par défaut, écart de 12 points, limites de l’écran, écrans à origine négative et sauvegarde du quadrant lors du passage en position fixe.
 - Animations désactivées par défaut, activables puis désactivables, sans transparence résiduelle.
 - Catalogues français/anglais complets, arguments de formatage, langue système et changement de langue sans transformation des données originales.
@@ -37,6 +38,8 @@ L’application de démonstration a été ouverte par pilotage de l’interface 
 Pour la version 0.2.0, le passage en direct de la langue système à français puis retour a été vérifié, y compris les menus, le titre, les commentaires des entrées et les tailles en octets. Le curseur de police a été testé à 24 puis 14 points ; les lignes s’adaptent sans couper verticalement le texte. Le réglage des animations a été activé puis désactivé. Les préférences de démonstration ont été remises à 14 points, langue système et animations désactivées.
 
 Pour la version 0.3.0, le sélecteur carré a été vérifié visuellement : quatre boutons autour du curseur, bas à droite sélectionné initialement, boutons désactivés en position fixe puis activés en mode pointeur. Le choix haut gauche puis le retour bas droite ont été contrôlés. La police de l’aperçu a été mise à 12 points ; le mode fixe et le quadrant bas droite ont été restaurés après vérification.
+
+Pour la version 0.4.0, les lignes compactes ont été comparées visuellement à la présentation espacée : mêmes textes et icônes, marges verticales réduites. Le réglage Vue compacte a été vérifié initialement activé, désactivé puis réactivé en direct ; l’aperçu conserve le mode compact à la fin du contrôle.
 
 Deux fixtures de fournisseurs différés internes au processus de test produisent un avertissement AppKit d’affinité de thread. Le fournisseur différé testé dans un processus distinct remplit sa promesse sur son propre fil principal, sans cet avertissement ; la récupération des octets et la gestion d’une exception sont vérifiées.
 

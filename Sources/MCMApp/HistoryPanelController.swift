@@ -21,7 +21,9 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     private var showPreviews = true
     private var showSizes = true
     private var fontSize: CGFloat = 12
-    private var rowHeight: CGFloat = 56
+    private var compactView = true
+    private var rowLayout = HistoryRowLayout(fontSize: 12, compact: true)
+    private var rowHeight: CGFloat { rowLayout.height }
     private var positioningWindow = false
     private var didPositionWindow = false
     private var contextEntryID: UUID?
@@ -64,14 +66,18 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
     required init?(coder: NSCoder) { nil }
 
     func update(rows newRows: [HistoryRow], showPreviews: Bool, showSizes: Bool, status: String?,
-                fontSize: Double = 12, animationsEnabled: Bool = false) {
+                fontSize: Double = 12, animationsEnabled: Bool = false, compactView: Bool = true) {
         let previousIndex = table.selectedRow
         let previousID = rows.indices.contains(previousIndex) ? rows[previousIndex].entry.id : nil
         rows = newRows
         self.showPreviews = showPreviews
         self.showSizes = showSizes
-        self.fontSize = Self.validFontSize(fontSize)
-        rowHeight = max(56, ceil(self.fontSize * 2 + 22))
+        let normalizedFontSize = Self.validFontSize(fontSize)
+        if self.fontSize != normalizedFontSize || self.compactView != compactView {
+            self.fontSize = normalizedFontSize
+            self.compactView = compactView
+            rowLayout = HistoryRowLayout(fontSize: normalizedFontSize, compact: compactView)
+        }
         table.rowHeight = rowHeight
         historyPanel.animationBehavior = animationsEnabled ? .utilityWindow : .none
         historyPanel.alphaValue = 1
@@ -158,7 +164,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         table.addTableColumn(column)
         table.headerView = nil
         table.style = .plain
-        table.rowHeight = 56
+        table.rowHeight = rowHeight
         table.intercellSpacing = NSSize(width: 0, height: 1)
         table.gridStyleMask = .solidHorizontalGridLineMask
         table.gridColor = .separatorColor
@@ -245,7 +251,7 @@ final class HistoryPanelController: NSWindowController, NSWindowDelegate, NSTabl
         let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? HistoryCellView ?? HistoryCellView()
         cell.identifier = identifier
         cell.configure(row: rows[row], rank: row + 1, showPreview: showPreviews, showSize: showSizes,
-                       fontSize: fontSize, rowHeight: rowHeight)
+                       fontSize: fontSize, layout: rowLayout)
         return cell
     }
 
@@ -391,6 +397,30 @@ private final class HistoryTableView: NSTableView {
 }
 
 @MainActor
+private struct HistoryRowLayout {
+    static let textSpacing: CGFloat = 2
+    let height: CGFloat
+    let previewSide: CGFloat
+    let numberInset: CGFloat
+
+    init(fontSize: CGFloat, compact: Bool) {
+        // Measure native single-line controls once per font/layout change, never
+        // per history entry. The same fonts and preview size serve both layouts.
+        let title = NSTextField(labelWithString: "Ag")
+        title.font = .systemFont(ofSize: fontSize)
+        title.usesSingleLineMode = true
+        let metadata = NSTextField(labelWithString: "Ag")
+        metadata.font = .systemFont(ofSize: max(10, fontSize - 2))
+        metadata.usesSingleLineMode = true
+        previewSide = min(48, max(40, ceil(fontSize * 1.6)))
+        let textHeight = title.intrinsicContentSize.height + metadata.intrinsicContentSize.height + Self.textSpacing
+        let fittedHeight = ceil(max(textHeight, previewSide) + 4)
+        height = compact ? fittedHeight : max(max(56, ceil(fontSize * 2 + 22)), fittedHeight)
+        numberInset = compact ? 4 : 10
+    }
+}
+
+@MainActor
 private final class HistoryCellView: NSTableCellView {
     private let numberPill = NumberPillView()
     private let preview = NSImageView()
@@ -439,7 +469,7 @@ private final class HistoryCellView: NSTableCellView {
         let labels = NSStackView(views: [titleLabel, metadata])
         labels.orientation = .vertical
         labels.alignment = .leading
-        labels.spacing = 2
+        labels.spacing = HistoryRowLayout.textSpacing
         labels.translatesAutoresizingMaskIntoConstraints = false
         addSubview(numberPill)
         addSubview(preview)
@@ -469,14 +499,13 @@ private final class HistoryCellView: NSTableCellView {
     required init?(coder: NSCoder) { nil }
 
     func configure(row: HistoryRow, rank: Int, showPreview: Bool, showSize: Bool,
-                   fontSize: CGFloat, rowHeight: CGFloat) {
+                   fontSize: CGFloat, layout: HistoryRowLayout) {
         numberPill.number = rank
         numberPill.fontSize = fontSize
         numberWidth.constant = max(32, ceil(fontSize * 2))
-        numberHeight.constant = rowHeight - 10
-        let previewSide = min(48, max(40, ceil(fontSize * 1.6)))
-        previewWidth.constant = previewSide
-        previewHeight.constant = previewSide
+        numberHeight.constant = layout.height - layout.numberInset
+        previewWidth.constant = layout.previewSide
+        previewHeight.constant = layout.previewSide
         titleLabel.font = .systemFont(ofSize: fontSize)
         detailLabel.font = .systemFont(ofSize: max(10, fontSize - 2))
         sizeLabel.font = detailLabel.font
