@@ -1,51 +1,62 @@
-# One Clipboard History 1.0.0 validation — 9 November 2026
+# One Clipboard History 1.0.1 validation — 9 November 2026
 
-Version **1.0.0 (10)**, macOS 27 on Apple Silicon. This release automates
-packaging and GitHub publication; clipboard capture and paste behavior are
-unchanged from 0.9.0. Previous application checks remain recorded in
-[VALIDATION-0.9.md](VALIDATION-0.9.md) and its linked historical reports.
+Version **1.0.1 (11)** fixes shortcut registration recovery and interrupted
+shortcut recording. The reported incident occurred on another Mac without
+Quicksilver; its exact runtime cause has not been established from this Mac.
+Previous application and release checks remain in
+[VALIDATION-1.0.md](VALIDATION-1.0.md) and its linked reports.
 
-## Executed local checks
+## State and behavior
 
-- **139 Swift tests passed:** 79 Core and 60 AppKit/settings tests.
-- **35 Python tests passed:** 10 metadata, 17 package and 8 publication tests.
-- Workflow syntax checked with actionlint 1.7.12. Its configuration recognizes
-  the repository's additional `xcode-27` runner label.
-- Release app built and validated as version 1.0.0/build 10. Both distribution
-  configurations use the same canonical version/build.
-- Actual macOS packaging succeeded: direct bundle identity and arm64 checked,
-  ZIP created with `ditto`, extracted into a fresh directory, then app signature,
-  executable permissions, resources, architecture and metadata checked again.
-- Portable manifest, ZIP and checksum verification passed for that real package.
-  Local uncommitted work was recorded as dirty; publication rejects that state.
+`AppSettings.shortcut` remains the persisted requested key combination.
+`GlobalHotkey` owns native registrations; `AppController.configureHotkey` no
+longer uses a separate successful-registration cache as proof of current state.
+Keyboard code and modifiers identify a physical binding independently of its
+display label.
 
-## Release automation coverage
+Recording temporarily releases the current key. `RecorderButton.cancelRecording`
+balances that suspension on Escape, acceptance, responder/key-window loss,
+window close, detachment and SwiftUI dismantling. Failure to acquire a first
+responder never suspends the existing shortcut. Ending recording, waking and
+activating the app request a native refresh, including re-recording the same key.
 
-The metadata tests reject invalid or mismatched versions, builds and tags.
-Package tests reject altered archives, lost executable permissions, corrupt
-sidecars, unsafe paths, preview/Store bundles and mismatched bundle metadata.
+Carbon registration is exclusive: another owner's conflicting registration must
+produce an error instead of a silent nonexclusive success. A failed change keeps
+or attempts to restore the previous registration; the UI only claims a previous
+active binding when one remains usable. Failed unregister operations retain
+their native handles, and incomplete rollback suppresses dispatch until cleanup.
+The screenshot preview no longer registers a global shortcut.
 
-Publication tests cover draft creation and retries, byte verification before
-publication, dirty/wrong-source rejection, remote-tag mismatches, corrupted
-downloads, unexpected draft assets and preservation of published releases.
-They use a fake GitHub client and do not mutate remote state.
+## Executed checks
 
-The [macOS workflow](https://github.com/armateurlabs/one-clipboard-history/actions/workflows/ci.yml)
-runs these tests, release compilation, real ZIP verification and sandboxed
-archiving. Branch CI does not publish. A matching pushed tag enables the
-dependent publish job, which uses that run's verified artifact. GitHub retains
-dated run logs; the published `release.json` records the exact source commit
-and package digests. See [RELEASING.md](RELEASING.md) for the contract and retries.
+- **157 Swift tests passed:** 79 Core and 78 AppKit/settings tests.
+- **35 Python release tests passed.**
+- The shortcut suites cover 20 registration/lifecycle cases, including physical
+  key equality, exclusive conflicts, real Carbon ownership/release on an unused
+  modified F19 combination, forced refresh, transient/stale-reference recovery,
+  failed rollback and cleanup, window close/detach/dismantle and keyboard cancel.
+- Real NSWindow lifecycle checks confirm balanced recording callbacks. Native
+  Carbon registration tests complement synthetic event routing; neither is a
+  substitute for physical keyboard delivery in the affected session.
+- Seven localization catalogs retain matching keys, format arguments and
+  nonempty translations, including the accurate no-active-shortcut error.
+- In the real preview UI, starting recording changed the label to the capture
+  prompt; Escape restored the saved shortcut label. The preview was then quit.
 
-## Distribution limits
+The current settings and stored shortcut were inspected locally. A local
+conflicting clipboard trigger was identified separately; this does not establish
+the cause on the other Mac. Personal clipboard contents are not included in
+commits, screenshots or release assets.
 
-No valid Apple code-signing identity was available on the development Mac on
-9 November 2026. The current CI build is ad hoc signed and not notarized. The
-workflow reports signing status in its notes and manifest; it does not claim
-Gatekeeper acceptance or App Store approval. The sandbox archive remains a
-separate CI prototype, not a release installer or Store submission.
+## Delivery and remaining checks
 
-The existing Excel source-context warning and outstanding physical permission,
-focus, complex Office, VoiceOver, login, sleep/wake and display qualification
-items remain open. A 1.0 version number does not receive those scenarios.
-No new CPU limit or opening-time claim is introduced.
+The [tag workflow](https://github.com/armateurlabs/one-clipboard-history/actions/workflows/ci.yml)
+checks the source, app bundle, extracted ZIP and sandbox prototype before
+publishing. Existing preferences and clipboard payload formats remain compatible.
+Fully quit the old process before replacing the app; closing its history window
+does not quit the clipboard manager.
+
+The affected Mac still needs a physical shortcut check after installing 1.0.1,
+including re-recording and closing settings while recording. No remote hardware
+or sleep/wake test is claimed. The existing Office, focus, signing/notarization
+and Store qualification limits remain unchanged. No CPU ceiling was introduced.

@@ -171,7 +171,7 @@ private struct PointerQuadrantPicker: View {
     }
 }
 
-private struct ShortcutRecorder: NSViewRepresentable {
+struct ShortcutRecorder: NSViewRepresentable {
     @Binding var shortcut: KeyboardShortcut
     let onRecordingChange: (Bool) -> Void
     func makeNSView(context: Context) -> RecorderButton {
@@ -191,14 +191,18 @@ private struct ShortcutRecorder: NSViewRepresentable {
         button.toolTip = L10n.text("Click, then press the new shortcut. Escape cancels.")
         if !button.recording { button.title = shortcut.label }
     }
+
+    static func dismantleNSView(_ button: RecorderButton, coordinator: ()) {
+        button.cancelRecording()
+    }
 }
 
 @MainActor
-private final class RecorderButton: NSButton {
+final class RecorderButton: NSButton {
     var onRecord: ((KeyboardShortcut) -> Void)?
     var onRecordingChange: ((Bool) -> Void)?
     var shortcutLabel = "⌥A"
-    var recording = false
+    private(set) var recording = false
     override var acceptsFirstResponder: Bool { true }
 
     init() {
@@ -209,28 +213,64 @@ private final class RecorderButton: NSButton {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     @objc private func beginRecording() {
+        guard !recording else { return }
+        // Do not suspend the global shortcut unless this control can actually
+        // receive the replacement. A detached or refusing window changes nothing.
+        guard let window, window.makeFirstResponder(self), window.firstResponder === self else { return }
         recording = true
-        onRecordingChange?(true)
         title = L10n.text("Press the keys…")
-        window?.makeFirstResponder(self)
+        onRecordingChange?(true)
     }
     override func keyDown(with event: NSEvent) {
         guard recording else { super.keyDown(with: event); return }
-        if event.keyCode == 53 { finish(); return }
+        if event.keyCode == 53 { cancelRecording(); return }
         guard let shortcut = KeyboardShortcut(event: event) else {
             title = L10n.text("Add ⌥, ⌘ or ⌃")
             return
         }
         onRecord?(shortcut)
-        finish()
+        cancelRecording()
     }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard recording else { return super.performKeyEquivalent(with: event) }
         keyDown(with: event)
         return true
     }
-    override func resignFirstResponder() -> Bool { finish(); return super.resignFirstResponder() }
-    private func finish() {
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { cancelRecording() }
+        return resigned
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if window !== newWindow {
+            cancelRecording()
+            if let window {
+                NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: window)
+                NotificationCenter.default.removeObserver(self, name: NSWindow.didResignKeyNotification, object: window)
+            }
+            if let newWindow {
+                NotificationCenter.default.addObserver(self, selector: #selector(windowStoppedRecording(_:)),
+                    name: NSWindow.willCloseNotification, object: newWindow)
+                NotificationCenter.default.addObserver(self, selector: #selector(windowStoppedRecording(_:)),
+                    name: NSWindow.didResignKeyNotification, object: newWindow)
+            }
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func viewWillMove(toSuperview newSuperview: NSView?) {
+        if newSuperview == nil { cancelRecording() }
+        super.viewWillMove(toSuperview: newSuperview)
+    }
+
+    @objc private func windowStoppedRecording(_ notification: Notification) {
+        cancelRecording()
+    }
+
+    // Every exit is idempotent: closing a window can also resign its responder
+    // and detach the SwiftUI view, but only one resume callback is required.
+    func cancelRecording() {
         let wasRecording = recording
         recording = false
         title = shortcutLabel

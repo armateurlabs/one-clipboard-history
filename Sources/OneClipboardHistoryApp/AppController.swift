@@ -34,7 +34,6 @@ final class AppController {
     private var presentationGeneration = 0
     private var settingsWindow: NSWindowController?
     private var statusItem: NSStatusItem?
-    private var activeShortcut: KeyboardShortcut?
     private var isRecordingShortcut = false
     private var pasteTarget: NSRunningApplication?
     private var lastExternalApplication: NSRunningApplication?
@@ -87,10 +86,13 @@ final class AppController {
         settings.onShortcutRecordingChange = { [weak self] recording in
             guard let self else { return }
             isRecordingShortcut = recording
-            if recording { hotkey.suspend(); activeShortcut = nil }
-            else { configureHotkey() }
+            if recording { hotkey.suspend() }
+            else { configureHotkey(force: true) }
         }
-        hotkey.onPressed = { [weak self] in self?.toggle() }
+        hotkey.onPressed = { [weak self] in
+            guard let self, !isRecordingShortcut else { return }
+            toggle()
+        }
         configureHotkey()
         buildMenu()
         lastExternalApplication = NSWorkspace.shared.frontmostApplication
@@ -106,10 +108,16 @@ final class AppController {
         }
         wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
-        ) { [weak self] _ in Task { @MainActor [weak self] in self?.restartCapture() } }
+        ) { [weak self] _ in Task { @MainActor [weak self] in
+            self?.restartCapture()
+            self?.configureHotkey(force: true)
+        } }
         applicationActivationObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification, object: NSApp, queue: .main
-        ) { [weak self] _ in Task { @MainActor [weak self] in self?.loginItem.refresh() } }
+        ) { [weak self] _ in Task { @MainActor [weak self] in
+            self?.loginItem.refresh()
+            self?.configureHotkey(force: true)
+        } }
         enqueue { [weak self] in
             guard let self else { return }
             do {
@@ -468,13 +476,16 @@ final class AppController {
         }
     }
 
-    private func configureHotkey() {
-        guard !shuttingDown, !isRecordingShortcut, activeShortcut != settings.shortcut else { return }
-        if hotkey.register(settings.shortcut) {
-            activeShortcut = settings.shortcut
+    private func configureHotkey(force: Bool = false) {
+        // The screenshot preview must never compete with the installed app.
+        guard !demo, !shuttingDown, !isRecordingShortcut else { return }
+        if hotkey.register(settings.shortcut, force: force) {
             settings.shortcutError = nil
+            if statusMessage == "Shortcut unavailable: choose another one in Settings." { setStatus(nil) }
         } else {
-            settings.shortcutError = "Shortcut unavailable. The previous shortcut remains active."
+            settings.shortcutError = !hotkey.hasActiveShortcut
+                ? "Shortcut unavailable. Choose a different shortcut."
+                : "Shortcut unavailable. The previous shortcut remains active."
             setStatus("Shortcut unavailable: choose another one in Settings.")
         }
     }

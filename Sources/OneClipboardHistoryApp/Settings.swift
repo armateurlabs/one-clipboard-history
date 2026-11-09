@@ -54,6 +54,10 @@ struct KeyboardShortcut: Codable, Equatable, Sendable {
         return result + (keyCode == 49 ? L10n.text("Space") : keyLabel)
     }
 
+    func hasSameKeyCombination(as other: KeyboardShortcut) -> Bool {
+        keyCode == other.keyCode && modifiers == other.modifiers
+    }
+
     init(keyCode: UInt32, modifiers: UInt32, keyLabel: String) {
         self.keyCode = keyCode
         self.modifiers = modifiers

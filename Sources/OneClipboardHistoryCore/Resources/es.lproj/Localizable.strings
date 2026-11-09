@@ -119,6 +119,7 @@
 "Settings…" = "Ajustes…";
 "Shortcut and window" = "Atajo y ventana";
 "Shortcut unavailable. The previous shortcut remains active." = "Atajo no disponible. El atajo anterior sigue activo.";
+"Shortcut unavailable. Choose a different shortcut." = "Atajo no disponible. Elige otro atajo.";
 "Shortcut unavailable: choose another one in Settings." = "Atajo no disponible: elige otro en Ajustes.";
 "Show History" = "Mostrar el historial";
 "Show data size" = "Mostrar el tamaño de los datos";

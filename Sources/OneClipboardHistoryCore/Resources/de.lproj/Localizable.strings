@@ -119,6 +119,7 @@
 "Settings…" = "Einstellungen…";
 "Shortcut and window" = "Tastenkürzel und Fenster";
 "Shortcut unavailable. The previous shortcut remains active." = "Tastenkürzel nicht verfügbar. Das vorherige Tastenkürzel bleibt aktiv.";
+"Shortcut unavailable. Choose a different shortcut." = "Tastenkürzel nicht verfügbar. Wähle ein anderes Tastenkürzel.";
 "Shortcut unavailable: choose another one in Settings." = "Tastenkürzel nicht verfügbar: Wähle ein anderes in den Einstellungen.";
 "Show History" = "Verlauf anzeigen";
 "Show data size" = "Datengröße anzeigen";

@@ -119,6 +119,7 @@
 "Settings…" = "设置…";
 "Shortcut and window" = "快捷键与窗口";
 "Shortcut unavailable. The previous shortcut remains active." = "快捷键不可用。原快捷键仍然有效。";
+"Shortcut unavailable. Choose a different shortcut." = "快捷键不可用。请选择其他快捷键。";
 "Shortcut unavailable: choose another one in Settings." = "快捷键不可用，请在设置中选择其他快捷键。";
 "Show History" = "显示历史记录";
 "Show data size" = "显示数据大小";

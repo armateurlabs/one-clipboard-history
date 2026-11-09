@@ -119,6 +119,7 @@
 "Settings…" = "Settings…";
 "Shortcut and window" = "Shortcut and window";
 "Shortcut unavailable. The previous shortcut remains active." = "Shortcut unavailable. The previous shortcut remains active.";
+"Shortcut unavailable. Choose a different shortcut." = "Shortcut unavailable. Choose a different shortcut.";
 "Shortcut unavailable: choose another one in Settings." = "Shortcut unavailable: choose another one in Settings.";
 "Show History" = "Show History";
 "Show data size" = "Show data size";

@@ -119,6 +119,7 @@
 "Settings…" = "Impostazioni…";
 "Shortcut and window" = "Abbreviazione e finestra";
 "Shortcut unavailable. The previous shortcut remains active." = "Abbreviazione non disponibile. L’abbreviazione precedente resta attiva.";
+"Shortcut unavailable. Choose a different shortcut." = "Abbreviazione non disponibile. Scegli un’altra abbreviazione.";
 "Shortcut unavailable: choose another one in Settings." = "Abbreviazione non disponibile: scegline un’altra in Impostazioni.";
 "Show History" = "Mostra cronologia";
 "Show data size" = "Mostra dimensioni dei dati";

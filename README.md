@@ -16,7 +16,7 @@ Screenshots show the real application with synthetic examples, never personal cl
 2. Press **⌥A** to show or hide history.
 3. Press **1–9** to paste that entry into the previously active app.
 
-Arrow keys select an entry; **Return** or a double-click pastes it; **Escape** hides the window. Use the gear or **⌘,** for settings. The shortcut is configurable, including to avoid a conflict with Quicksilver.
+Arrow keys select an entry; **Return** or a double-click pastes it; **Escape** hides the window. Use the gear or **⌘,** for settings. The shortcut is configurable, including to avoid a conflict with another app or a macOS shortcut.
 
 - Newest copy first. Exact duplicates move to the top; different formatting stays distinct.
 - Preserve the bytes of plain text, HTML, RTF, images, file references and available private representations. Thumbnails and summaries never replace original data.
@@ -31,6 +31,14 @@ Existing installations keep their layout: the previous compact view becomes **no
 
 ![Native One Clipboard History settings](docs/screenshots/settings.png)
 
+### Shortcut recovery
+
+If the shortcut types an Option character or does not open history, use the menu-bar **Show History** or **Settings…** command. Record the desired combination in Settings and check the inline error: the saved shortcut label alone does not prove that macOS accepted it. **Escape** cancels recording; closing settings, losing window focus or removing the recorder also ends an unfinished recording.
+
+The saved preference is the requested shortcut; the app tracks the current native registration separately. Exclusive registration exposes conflicts instead of silently accepting an ineffective binding. A failed replacement keeps or attempts to restore the previous registered combination when available, and reports when none remains active. Wake and app activation refresh the native registration.
+
+The registration contract lives in [GlobalHotkey.swift](Sources/OneClipboardHistoryApp/GlobalHotkey.swift) (`register`, `suspend`, `currentShortcut`), [AppController.configureHotkey](Sources/OneClipboardHistoryApp/AppController.swift) and [RecorderButton.cancelRecording](Sources/OneClipboardHistoryApp/SettingsView.swift).
+
 ## Languages
 
 The interface supports **English, French, Spanish, Italian, Russian, Simplified Chinese and German**. Choose **System language** or a specific language in Settings → Appearance → Language; changes apply immediately. Languages appear under their native names so the selector remains recognizable in any interface language.
@@ -41,7 +49,7 @@ System language follows the first supported macOS language preference and falls 
 
 Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-**Version 1.0.0 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
+**Version 1.0.1 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
 
 The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 
@@ -78,7 +86,7 @@ The build script generates original icon artwork and a locally signed app with t
 open 'build/One Clipboard History Preview.app'
 ```
 
-The preview uses a private pasteboard, separate preferences and a simulated login service. It supports examining and photographing the interface without capturing real history.
+The preview uses a private pasteboard, separate preferences and a simulated login service. It never registers a global shortcut. It supports examining and photographing the interface without capturing real history.
 
 The **OneClipboardHistory Store** Xcode target prepares sandboxing and archiving. See [APP_STORE.md](docs/APP_STORE.md) for commands, signing requirements and feasibility results.
 

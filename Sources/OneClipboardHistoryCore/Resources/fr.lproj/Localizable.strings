@@ -119,6 +119,7 @@
 "Settings…" = "Réglages…";
 "Shortcut and window" = "Raccourci et fenêtre";
 "Shortcut unavailable. The previous shortcut remains active." = "Raccourci indisponible. Le précédent reste actif.";
+"Shortcut unavailable. Choose a different shortcut." = "Raccourci indisponible. Choisissez un autre raccourci.";
 "Shortcut unavailable: choose another one in Settings." = "Raccourci indisponible : modifiez-le dans les réglages.";
 "Show History" = "Afficher l’historique";
 "Show data size" = "Afficher la taille des données";

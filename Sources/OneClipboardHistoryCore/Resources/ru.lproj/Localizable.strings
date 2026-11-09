@@ -119,6 +119,7 @@
 "Settings…" = "Настройки…";
 "Shortcut and window" = "Сочетание клавиш и окно";
 "Shortcut unavailable. The previous shortcut remains active." = "Сочетание недоступно. Прежнее сочетание остаётся активным.";
+"Shortcut unavailable. Choose a different shortcut." = "Сочетание недоступно. Выберите другое сочетание.";
 "Shortcut unavailable: choose another one in Settings." = "Сочетание недоступно: выберите другое в настройках.";
 "Show History" = "Показать историю";
 "Show data size" = "Показывать размер данных";
