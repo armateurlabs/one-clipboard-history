@@ -22,8 +22,9 @@ activating the app request a native refresh, including re-recording the same key
 
 Carbon registration is exclusive: another owner's conflicting registration must
 produce an error instead of a silent nonexclusive success. A failed change keeps
-or attempts to restore the previous registration; the UI only claims a previous
-active binding when one remains usable. Failed unregister operations retain
+or attempts to restore the previous registration; the UI distinguishes a retained
+registration from failed restoration with none retained. A retained native handle
+alone cannot prove physical key delivery. Failed unregister operations retain
 their native handles, and incomplete rollback suppresses dispatch until cleanup.
 The screenshot preview no longer registers a global shortcut.
 
