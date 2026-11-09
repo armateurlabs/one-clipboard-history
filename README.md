@@ -41,7 +41,7 @@ System language follows the first supported macOS language preference and falls 
 
 Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-**Version 0.9.0 status:** the personal build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; a local build is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
+**Version 1.0.0 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
 
 The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 
@@ -81,6 +81,12 @@ open 'build/One Clipboard History Preview.app'
 The preview uses a private pasteboard, separate preferences and a simulated login service. It supports examining and photographing the interface without capturing real history.
 
 The **OneClipboardHistory Store** Xcode target prepares sandboxing and archiving. See [APP_STORE.md](docs/APP_STORE.md) for commands, signing requirements and feasibility results.
+
+## Automated releases
+
+Pushing a matching `vX.Y.Z` tag runs tests, builds both variants and validates a versioned ZIP after extracting it. A separate job then publishes the GitHub release with the app ZIP, `SHA256SUMS.txt`, source manifest and release notes. Ordinary branch, pull request and manual CI runs do not publish.
+
+See [RELEASING.md](docs/RELEASING.md) for version updates, tag commands, signing status and safe retries. The sandboxed Store archive remains a CI prototype artifact.
 
 ## Fidelity, performance and limitations
 

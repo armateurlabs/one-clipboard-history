@@ -5,15 +5,21 @@ if [[ "$#" -lt 1 || "$#" -gt 2 || ( "$#" == 2 && "$2" != --store ) ]]; then
     exit 2
 fi
 codesign --verify --deep --strict "$1"
-python3 - "$@" <<'PY'
+OCH_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+python3 - "$OCH_ROOT" "$@" <<'PY'
 import os
 from pathlib import Path
 import plistlib
 import subprocess
 import sys
 
-app = Path(sys.argv[1]).resolve()
-store = len(sys.argv) == 3
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / 'scripts'))
+from release_metadata import load_metadata
+
+metadata = load_metadata(root)
+app = Path(sys.argv[2]).resolve()
+store = len(sys.argv) == 4
 def require(condition, message):
     if not condition:
         raise SystemExit(f"Bundle validation failed: {message}")
@@ -28,7 +34,7 @@ require(identifier == expected, f'unexpected bundle ID {identifier!r}')
 name = 'One Clipboard History Preview' if info.get('OCHPreviewMode') is True else 'One Clipboard History'
 require(info.get('CFBundleName') == name and info.get('CFBundleDisplayName') == name, 'incorrect app name')
 require(info.get('CFBundleExecutable') == 'OneClipboardHistory', 'incorrect executable name')
-require(info.get('CFBundleShortVersionString') == '0.9.0' and info.get('CFBundleVersion') == '9', 'incorrect release version')
+require(info.get('CFBundleShortVersionString') == metadata['version'] and info.get('CFBundleVersion') == metadata['build'], 'incorrect release version')
 require(info.get('LSUIElement') is True, 'menu bar agent flag is missing')
 require(info.get('LSMinimumSystemVersion') == '27.0', 'incorrect deployment target')
 require(info.get('LSApplicationCategoryType') == 'public.app-category.productivity', 'app category is missing')
@@ -69,5 +75,5 @@ if store:
         require(entitlements.get(key) is True, f'{key} is missing from the code signature')
     require(not entitlements.get('com.apple.security.get-task-allow'), 'Release archive allows debugging')
     require(not any('temporary-exception' in key or key == 'com.apple.security.accessibility' for key in entitlements), 'unexpected sandbox exception')
-print(f'Validated {name} 0.9.0 (9), {identifier}' + (' — sandbox enabled' if store else ''))
+print(f"Validated {name} {metadata['version']} ({metadata['build']}), {identifier}" + (' — sandbox enabled' if store else ''))
 PY
