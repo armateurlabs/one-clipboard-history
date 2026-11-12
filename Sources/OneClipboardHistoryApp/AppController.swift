@@ -174,8 +174,17 @@ final class AppController {
     }
 
     private func receive(_ entry: ClipboardEntry) {
+        let received = ContinuousClock.now
         enqueue { [weak self] in
             guard let self else { return }
+            let started = ContinuousClock.now
+            defer {
+                if ProcessInfo.processInfo.arguments.contains("--measure") {
+                    // Include queueing and the first panel update, but no clipboard metadata.
+                    print("history_queue_duration=\(received.duration(to: started))")
+                    print("history_update_duration=\(started.duration(to: .now))")
+                }
+            }
             do {
                 let update = try await repository.insert(entry)
                 await refresh(update.entries)

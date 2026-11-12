@@ -49,7 +49,7 @@ System language follows the first supported macOS language preference and falls 
 
 Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-**Version 1.0.1 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
+**Version 1.0.2 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
 
 The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 
@@ -98,13 +98,13 @@ See [RELEASING.md](docs/RELEASING.md) for version updates, tag commands, signing
 
 ## Fidelity, performance and limitations
 
-Capture polls every **200 ms** on a dedicated queue. Intermediate copies replaced between polls may be missed. Deferred formats are materialized during capture; incomplete entries are identified and cannot be pasted. Budget eviction removes whole entries, never selected formats within an entry.
+Capture checks for changes every **20 ms**, with 2 ms timer leeway, on a dedicated queue. macOS provides a [`changeCount`](https://developer.apple.com/documentation/appkit/nspasteboard/changecount) rather than a public clipboard-change notification; [Chromium also uses polling](https://chromium.googlesource.com/chromium/src/+/refs/tags/137.0.7123.2/remoting/host/clipboard_mac.mm). Opening history requests an immediate check. These are scheduling intervals, not a guarantee of capture latency. Intermediate copies replaced between reads may be missed. Deferred formats are materialized during capture; incomplete entries are identified and cannot be pasted. Budget eviction removes whole entries, never selected formats within an entry.
 
 Restoration creates independent AppKit objects. Private Word and Excel formats may depend on their source application; byte-fidelity tests alone do not establish full Office paste fidelity. [VALIDATION.md](docs/VALIDATION.md) distinguishes verified results from remaining scenarios.
 
 **Observed Excel limitation:** an older copy can paste calculated values instead of formulas even when all format bytes are preserved. Affected entries display a note and require confirmation before restoration. If the copy is still unchanged on the clipboard, the app keeps its owner and native paste behavior. Original formats are never removed as a workaround.
 
-No CPU quota is imposed. The target is warm opening below 50 ms at the 95th percentile; measurements document exactly what was timed. The `--measure` mode logs durations only, never clipboard contents.
+No CPU quota is imposed. The target is warm opening below 50 ms at the 95th percentile; measurements document exactly what was timed. The `--measure` mode logs durations only, never clipboard contents or source metadata. `pasteboard_capture_duration` measures change detection through source lookup and complete snapshot creation; `history_queue_duration` measures waiting behind earlier history operations; `history_update_duration` includes insertion, optional persistence and the first panel update. These durations do not establish when pixels reach the screen. Source-provided deferred data and durable storage can take longer than the polling interval. Thumbnail enrichment follows the initial panel update.
 
 ## Contribute
 

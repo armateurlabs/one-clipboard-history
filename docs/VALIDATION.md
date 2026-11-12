@@ -1,63 +1,94 @@
-# One Clipboard History 1.0.1 validation — 9 November 2026
+# One Clipboard History 1.0.2 validation — 12 November 2026
 
-Version **1.0.1 (11)** fixes shortcut registration recovery and interrupted
-shortcut recording. The reported incident occurred on another Mac without
-Quicksilver; its exact runtime cause has not been established from this Mac.
-Previous application and release checks remain in
-[VALIDATION-1.0.md](VALIDATION-1.0.md) and its linked reports.
+Version **1.0.2 (12)** reduces capture polling from 200 ms / 10 ms leeway to
+20 ms / 2 ms leeway. The reported delay was under half a second. The complete
+clipboard snapshot, permission policy, history authority and persistence format
+remain unchanged. Earlier checks and qualification limits are retained in
+[VALIDATION-1.0.1.md](VALIDATION-1.0.1.md) and its linked reports.
 
-## State and behavior
+## Capture path and state
 
-`AppSettings.shortcut` remains the persisted requested key combination.
-`GlobalHotkey` owns native registrations; `AppController.configureHotkey` no
-longer uses a separate successful-registration cache as proof of current state.
-Keyboard code and modifiers identify a physical binding independently of its
-display label.
+`PasteboardService.start` owns a Dispatch timer on its existing serial,
+user-initiated queue. `poll` reads access metadata and `changeCount`, then obtains
+best-effort source attribution on the main actor. `captureUnchecked` materializes
+all exposed representations, checks the change count again and creates the
+immutable snapshot and digest before calling `onCapture`. A clipboard change
+during capture is retried; own writes and unchanged counts remain suppressed.
+No keyboard monitoring, new input permission or CPU admission ceiling was added.
 
-Recording temporarily releases the current key. `RecorderButton.cancelRecording`
-balances that suspension on Escape, acceptance, responder/key-window loss,
-window close, detachment and SwiftUI dismantling. Failure to acquire a first
-responder never suspends the existing shortcut. Ending recording, waking and
-activating the app request a native refresh, including re-recording the same key.
+`AppController.show` already requests a check through `allowPermissionRequests`,
+without waiting for the next timer tick. `receive` queues the snapshot for
+`HistoryRepository.insert`, the sole owner of ordered history and durable
+storage. With persistence enabled, insertion still waits for storage before
+updating the panel. Placeholder rows precede asynchronous thumbnail enrichment.
+The faster cadence does not discard or defer original formats to accelerate UI.
 
-Carbon registration is exclusive: another owner's conflicting registration must
-produce an error instead of a silent nonexclusive success. A failed change keeps
-or attempts to restore the previous registration; the UI distinguishes a retained
-registration from failed restoration with none retained. A retained native handle
-alone cannot prove physical key delivery. Failed unregister operations retain
-their native handles, and incomplete rollback suppresses dispatch until cleanup.
-The screenshot preview no longer registers a global shortcut.
+macOS exposes [`NSPasteboard.changeCount`](https://developer.apple.com/documentation/appkit/nspasteboard/changecount)
+rather than a public global clipboard-change notification. The macOS 27 SDK
+header was inspected, and [Chromium's clipboard implementation](https://chromium.googlesource.com/chromium/src/+/refs/tags/137.0.7123.2/remoting/host/clipboard_mac.mm)
+documents the same polling constraint. Polling cannot guarantee copies replaced
+between reads, and timer cadence is not an end-to-end delivery guarantee.
 
-## Executed checks
+## Private-pasteboard latency measurement
 
-- **157 Swift tests passed:** 79 Core and 78 AppKit/settings tests.
-- **35 Python release tests passed.**
-- The shortcut suites cover 20 registration/lifecycle cases, including physical
-  key equality, exclusive conflicts, real Carbon ownership/release on an unused
-  modified F19 combination, forced refresh, transient/stale-reference recovery,
-  failed rollback and cleanup, window close/detach/dismantle and keyboard cancel.
-- Real NSWindow lifecycle checks confirm balanced recording callbacks. Native
-  Carbon registration tests complement synthetic event routing; neither is a
-  substitute for physical keyboard delivery in the affected session.
-- Seven localization catalogs retain matching keys, format arguments and
-  nonempty translations, including the accurate no-active-shortcut error.
-- In the real preview UI, starting recording changed the label to the capture
-  prompt; Escape restored the saved shortcut label. The preview was then quit.
+Host: **Apple M4 Pro, arm64, macOS 27.2.1 (26B131)**. Run:
 
-The current settings and stored shortcut were inspected locally. A local
-conflicting clipboard trigger was identified separately; this does not establish
-the cause on the other Mac. Personal clipboard contents are not included in
-commits, screenshots or release assets.
+```sh
+OCH_BENCHMARK_CAPTURE=1 swift test --filter PasteboardCapturePerformanceTests
+```
 
-## Delivery and remaining checks
+The opt-in benchmark writes 30 synthetic Python text copies per configuration to
+a uniquely named private pasteboard, varying each write's timer phase. Timing
+begins before the writer's pasteboard IPC and ends at the capture callback after
+snapshot creation. Every callback's original bytes are checked. It never reads
+or replaces the system clipboard and imposes no timing or CPU release threshold.
 
-The [tag workflow](https://github.com/armateurlabs/one-clipboard-history/actions/workflows/ci.yml)
-checks the source, app bundle, extracted ZIP and sandbox prototype before
-publishing. Existing preferences and clipboard payload formats remain compatible.
-Fully quit the old process before replacing the app; closing its history window
-does not quit the clipboard manager.
+| Polling / leeway | Samples | p50 | p95 | Maximum |
+| --- | ---: | ---: | ---: | ---: |
+| 200 ms / 10 ms | 30 | 108.667 ms | 195.971 ms | 206.417 ms |
+| 20 ms / 2 ms | 30 | 12.941 ms | 20.060 ms | 22.319 ms |
 
-The affected Mac still needs a physical shortcut check after installing 1.0.1,
-including re-recording and closing settings while recording. No remote hardware
-or sleep/wake test is claimed. The existing Office, focus, signing/notarization
-and Store qualification limits remain unchanged. No CPU ceiling was introduced.
+This measures the timer configuration change within the updated capture path,
+not separate installed application binaries. It includes writer IPC, detection,
+source lookup and snapshot creation. It excludes history queueing, persistence,
+panel updates, pixel delivery, large/deferred providers and the affected Mac.
+These observations are not a latency guarantee or an idle CPU/energy comparison.
+
+## Regression checks
+
+`PasteboardMonitoringTests` uses a 60-second timer with a loose 3-second callback
+timeout to prove explicit checks bypass the next tick, rather than imposing a
+tight performance assertion. Four cases cover byte-complete explicit capture,
+repeated start/latest callbacks, stop/drain/restart and own-write suppression.
+The existing suites cover raw bytes and format order, deferred representations,
+provider exceptions, permissions, persistence and shortcut recovery.
+
+Executed checks:
+
+- `swift test`: **160 individual tests passed** (83 Core, 77 AppKit/settings);
+  two opt-in measurements were skipped. Swift Testing reports 84 Core and
+  78 AppKit tests including those skipped cases. The capture benchmark above
+  was run separately and passed.
+- `python3 -m unittest discover -s scripts/tests -v`: **35 tests passed**.
+- `./scripts/build-app.sh` and `./scripts/validate-app.sh`: the direct
+  1.0.2 (12) bundle passed resource, localization, signature and metadata checks.
+- `python3 scripts/package_release.py --app 'build/One Clipboard History.app'
+  --tag v1.0.2 --output-dir build/capture-package-validation`: local ZIP creation,
+  extraction and bundle validation passed. This pre-commit diagnostic package
+  records a dirty source tree and is not the published artifact.
+
+## Timing diagnostics and limits
+
+Launch the app executable with `--measure` to log durations only:
+
+- `pasteboard_capture_duration`: successful observed change through source lookup and
+  complete snapshot creation; excludes the preceding polling wait.
+- `history_queue_duration`: time waiting behind earlier queued history work.
+- `history_update_duration`: insertion, optional persistence and the initial
+  panel update. This does not establish when AppKit/compositor pixels appear.
+- `panel_open_duration`: the existing warm opening measurement.
+
+No copied content, source names, paths, types or identifiers are emitted by
+these timing fields. Slow source data providers and durable writes can still
+take longer than 20 ms. Office fidelity, physical keyboard checks on other Macs,
+Developer ID/notarization and Store qualification retain their prior limits.

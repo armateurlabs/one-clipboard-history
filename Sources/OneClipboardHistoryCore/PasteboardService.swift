@@ -51,6 +51,9 @@ public final class PasteboardService: @unchecked Sendable {
     private let queue = DispatchQueue(label: "app.mcm.pasteboard", qos: .userInitiated, autoreleaseFrequency: .workItem)
     private let pasteboardName: String?
     private let fileAccess: FileAccessManager
+    private let pollingInterval: DispatchTimeInterval
+    private let timerLeeway: DispatchTimeInterval
+    private let measuresPerformance = ProcessInfo.processInfo.arguments.contains("--measure")
     private var pasteboard: NSPasteboard?
     private var timer: DispatchSourceTimer?
     private var lastObservedCount: Int?
@@ -62,9 +65,20 @@ public final class PasteboardService: @unchecked Sendable {
     private var active = false
     private var permissionPromptsAllowed = true
 
-    public init(pasteboardName: String? = nil, fileAccessManager: FileAccessManager = .init()) {
+    public convenience init(pasteboardName: String? = nil, fileAccessManager: FileAccessManager = .init()) {
+        self.init(pasteboardName: pasteboardName, fileAccessManager: fileAccessManager,
+                  pollingInterval: .milliseconds(20), timerLeeway: .milliseconds(2))
+    }
+
+    // Injectable cadence supports repeatable private-pasteboard measurements.
+    // Polling reads permission metadata and a change counter; formats are read
+    // only after a change, on this same serialized queue.
+    init(pasteboardName: String? = nil, fileAccessManager: FileAccessManager = .init(),
+         pollingInterval: DispatchTimeInterval, timerLeeway: DispatchTimeInterval = .milliseconds(2)) {
         self.pasteboardName = pasteboardName
         fileAccess = fileAccessManager
+        self.pollingInterval = pollingInterval
+        self.timerLeeway = timerLeeway
     }
 
     public func start(
@@ -79,7 +93,7 @@ public final class PasteboardService: @unchecked Sendable {
             active = true
             guard timer == nil else { return }
             let source = DispatchSource.makeTimerSource(queue: queue)
-            source.schedule(deadline: .now(), repeating: .milliseconds(200), leeway: .milliseconds(10))
+            source.schedule(deadline: .now(), repeating: pollingInterval, leeway: timerLeeway)
             source.setEventHandler { [weak self] in self?.poll() }
             timer = source
             source.resume()
@@ -245,6 +259,7 @@ public final class PasteboardService: @unchecked Sendable {
         }
         guard current != lastObservedCount, current != lastOwnWriteCount else { return }
         polling = true
+        let started = ContinuousClock.now
         // NSWorkspace belongs on the main actor. The slow data providers do not.
         Task { @MainActor [weak self] in
             let frontmost = NSWorkspace.shared.frontmostApplication
@@ -257,6 +272,10 @@ public final class PasteboardService: @unchecked Sendable {
                 do {
                     if let entry = try self.capture(sourceAppName: name, sourceBundleIdentifier: identifier,
                                                     allowPermissionPrompts: self.permissionPromptsAllowed) {
+                        if self.measuresPerformance {
+                            // Timing only: no contents, source names, types or identifiers.
+                            print("pasteboard_capture_duration=\(started.duration(to: .now))")
+                        }
                         self.report(entry.isComplete ? nil : PasteboardServiceError.incompleteCapture(entry.missingTypes).localizedDescription)
                         self.onCapture?(entry)
                     }
