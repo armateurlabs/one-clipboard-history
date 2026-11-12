@@ -16,6 +16,13 @@ immutable snapshot and digest before calling `onCapture`. A clipboard change
 during capture is retried; own writes and unchanged counts remain suppressed.
 No keyboard monitoring, new input permission or CPU admission ceiling was added.
 
+An empty read must not commit the observed count: a writer can clear contents,
+then supply formats later under the same ownership/count. Polling skips an empty
+type list on the background queue and checks again, avoiding main-actor source
+lookups while the writer has no formats. `captureUnchecked` records the observed
+count only after a nonempty snapshot exists. This also preserves zero-byte
+representations, which still have a declared format.
+
 `AppController.show` already requests a check through `allowPermissionRequests`,
 without waiting for the next timer tick. `receive` queues the snapshot for
 `HistoryRepository.insert`, the sole owner of ordered history and durable
@@ -45,8 +52,8 @@ or replaces the system clipboard and imposes no timing or CPU release threshold.
 
 | Polling / leeway | Samples | p50 | p95 | Maximum |
 | --- | ---: | ---: | ---: | ---: |
-| 200 ms / 10 ms | 30 | 108.667 ms | 195.971 ms | 206.417 ms |
-| 20 ms / 2 ms | 30 | 12.941 ms | 20.060 ms | 22.319 ms |
+| 200 ms / 10 ms | 30 | 108.418 ms | 199.983 ms | 204.287 ms |
+| 20 ms / 2 ms | 30 | 13.076 ms | 20.290 ms | 21.619 ms |
 
 This measures the timer configuration change within the updated capture path,
 not separate installed application binaries. It includes writer IPC, detection,
@@ -58,17 +65,19 @@ These observations are not a latency guarantee or an idle CPU/energy comparison.
 
 `PasteboardMonitoringTests` uses a 60-second timer with a loose 3-second callback
 timeout to prove explicit checks bypass the next tick, rather than imposing a
-tight performance assertion. Four cases cover byte-complete explicit capture,
-repeated start/latest callbacks, stop/drain/restart and own-write suppression.
-The existing suites cover raw bytes and format order, deferred representations,
-provider exceptions, permissions, persistence and shortcut recovery.
+tight performance assertion. Five test functions / six cases cover byte-complete
+explicit capture, repeated start/latest callbacks, stop/drain/restart, own-write
+suppression and delayed writers. Both the `setString` and `writeObjects` cases
+first failed while waiting for the second callback before the empty-write fix;
+both passed afterward under the same unchanged counter. The existing suites cover raw bytes
+and format order, deferred representations, provider exceptions, permissions,
+persistence and shortcut recovery.
 
 Executed checks:
 
-- `swift test`: **160 individual tests passed** (83 Core, 77 AppKit/settings);
-  two opt-in measurements were skipped. Swift Testing reports 84 Core and
-  78 AppKit tests including those skipped cases. The capture benchmark above
-  was run separately and passed.
+- `swift test`: all active suites passed. Swift Testing reports **85 Core and
+  78 AppKit/settings tests**, including one skipped opt-in measurement in each
+  target. The capture benchmark above was run separately and passed.
 - `python3 -m unittest discover -s scripts/tests -v`: **35 tests passed**.
 - `./scripts/build-app.sh` and `./scripts/validate-app.sh`: the direct
   1.0.2 (12) bundle passed resource, localization, signature and metadata checks.

@@ -7,6 +7,57 @@ import Testing
 @Suite("Clipboard monitoring", .serialized)
 @MainActor
 struct PasteboardMonitoringTests {
+    enum PendingWriter: String, CaseIterable, Sendable {
+        case setString, writeObjects
+    }
+
+    @Test(arguments: PendingWriter.allCases)
+    func anEmptyReadDoesNotConsumeAWriteThatFinishesAtTheSameChangeCount(_ writer: PendingWriter) async throws {
+        try await withPrivateMonitor { board, service in
+            let captures = MonitoringCaptures()
+            #expect(board.setString("before pending writer fixture", forType: .string))
+            service.start(onCapture: { captures.append($0) }, onStatus: { _ in })
+            try await captures.waitForCount(1)
+
+            let pendingCount = board.clearContents()
+            // Deterministically stop between the writer's clear and data
+            // publication. Both APIs can fill this ownership without another
+            // changeCount increment, so the empty read must leave it eligible
+            // for capture when the data arrives.
+            #expect(try await service.captureNow() == nil)
+            #expect(board.changeCount == pendingCount)
+            let text = "def café():\r\n\treturn  '🐍'\r\n\r\n"
+            let plain = ClipboardRepresentation(type: NSPasteboard.PasteboardType.string.rawValue,
+                                                data: Data(text.utf8))
+            let expected: [ClipboardRepresentation]
+            switch writer {
+            case .setString:
+                #expect(board.setString(text, forType: .string))
+                expected = [plain]
+            case .writeObjects:
+                let html = ClipboardRepresentation(type: NSPasteboard.PasteboardType.html.rawValue,
+                                                   data: Data("<pre><b>def café():</b></pre>".utf8))
+                let metadata = ClipboardRepresentation(type: "app.och.fixture.pending-private-format",
+                                                       data: Data([0, 255, 7, 0, 42]))
+                expected = [plain, html, metadata]
+                let item = NSPasteboardItem()
+                for representation in expected {
+                    #expect(item.setData(representation.data, forType: .init(representation.type)))
+                }
+                #expect(board.writeObjects([item]))
+            }
+            #expect(board.changeCount == pendingCount)
+            service.allowPermissionRequests()
+            try await captures.waitForCount(2)
+            await service.stopAndWait()
+
+            #expect(captures.values.count == 2)
+            let entry = try #require(captures.values.last?.entry)
+            #expect(entry.isComplete)
+            #expect(entry.items == [.init(representations: expected)])
+        }
+    }
+
     @Test func explicitInteractionCapturesBeforeTheNextTimerTick() async throws {
         try await withPrivateMonitor { board, service in
             let captures = MonitoringCaptures()

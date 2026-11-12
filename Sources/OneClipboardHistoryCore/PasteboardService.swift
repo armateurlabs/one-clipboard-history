@@ -241,9 +241,9 @@ public final class PasteboardService: @unchecked Sendable {
 
     private func poll() {
         guard active, !polling else { return }
-        let current: Int
+        let shouldCapture: Bool
         do {
-            current = try withPasteboardBoundary {
+            shouldCapture = try withPasteboardBoundary {
                 let accessBehavior = board().accessBehavior
                 guard ClipboardPermissionPolicy.canRead(
                     accessBehavior: accessBehavior, allowPermissionPrompts: permissionPromptsAllowed
@@ -251,13 +251,17 @@ public final class PasteboardService: @unchecked Sendable {
                     throw accessBehavior == .alwaysDeny
                         ? PasteboardServiceError.accessDenied : PasteboardServiceError.permissionRequired
                 }
-                return board().changeCount
+                let current = board().changeCount
+                guard current != lastObservedCount, current != lastOwnWriteCount else { return false }
+                // Clearing and filling can share one ownership/count. Leave
+                // empty writes pending without scheduling main-actor work.
+                return board().types?.isEmpty == false
             }
         } catch {
             report(error.localizedDescription)
             return
         }
-        guard current != lastObservedCount, current != lastOwnWriteCount else { return }
+        guard shouldCapture else { return }
         polling = true
         let started = ContinuousClock.now
         // NSWorkspace belongs on the main actor. The slow data providers do not.
@@ -345,8 +349,9 @@ public final class PasteboardService: @unchecked Sendable {
             bookmarks = fileAccess.captureBookmarks(for: fileURLs, authorizedURLs: authorizedURLs)
         }
         guard before == board.changeCount else { throw PasteboardServiceError.changedDuringCapture }
-        lastObservedCount = before
         guard !snapshots.isEmpty else { return nil }
+        // An early empty read must not hide a writer's later data at this count.
+        lastObservedCount = before
         return ClipboardEntry(
             sourceAppName: sourceAppName,
             sourceBundleIdentifier: sourceBundleIdentifier,
