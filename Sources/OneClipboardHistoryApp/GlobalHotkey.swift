@@ -79,10 +79,11 @@ final class GlobalHotkey {
         _ = installHandlerIfNeeded()
 
         // Connect CGEventTapHotkey's onPressed to GlobalHotkey's onPressed,
-        // but guard against macOS secure-input mode (password fields, Keychain).
+        // but guard against macOS secure-input mode (password fields, Keychain)
+        // and against inactive state (fix #6: parity with Carbon handler).
         if let cgBackend = selectedApi as? CGEventTapHotkey {
             cgBackend.onPressed = { [weak self] in
-                guard let self else { return }
+                guard let self, self.hasActiveShortcut else { return }
                 if CGEventTapHotkey.isSecureInputActive() {
                     self.onSecureInputDetected?()
                 } else {
@@ -92,6 +93,10 @@ final class GlobalHotkey {
         }
     }
 
+    /// Cached result of the CGEventTap availability probe (fix #9:
+    /// avoid a side-effecting probe on every init).
+    private static var cachedCGEventTapAvailable: Bool?
+
     /// Select the best available backend.
     ///
     /// If a custom API is provided (not ``CarbonBackend``), use it directly.
@@ -100,6 +105,11 @@ final class GlobalHotkey {
     private static func selectBackend(api: HotkeyRegistrationAPI) -> HotkeyRegistrationAPI {
         // Custom backend provided — use it as-is.
         guard api is CarbonBackend else { return api }
+
+        // Use cached probe result if available.
+        if let cached = cachedCGEventTapAvailable {
+            return cached ? CGEventTapHotkey() : CarbonBackend.shared
+        }
 
         // Try CGEventTapHotkey first (auto-detect path).
         let cgBackend = CGEventTapHotkey()
@@ -117,11 +127,9 @@ final class GlobalHotkey {
             _ = cgBackend.unregister(ref)
         }
 
-        if status == noErr {
-            return cgBackend
-        }
-
-        return CarbonBackend.shared
+        let available = status == noErr
+        cachedCGEventTapAvailable = available
+        return available ? cgBackend : CarbonBackend.shared
     }
 
     // MARK: - Event handler

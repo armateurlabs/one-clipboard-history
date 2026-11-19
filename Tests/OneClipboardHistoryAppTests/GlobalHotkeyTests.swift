@@ -212,6 +212,7 @@ struct GlobalHotkeyTests {
             _ = cgBackend.unregister(ref)
             let hotkey = GlobalHotkey(api: cgBackend)
             defer { hotkey.stop() }
+            #expect(hotkey.register(shortcut))
             var called = false
             hotkey.onPressed = { called = true }
             // CGEventTapHotkey's onPressed is connected to GlobalHotkey's onPressed.
@@ -290,6 +291,7 @@ struct GlobalHotkeyTests {
             _ = cgBackend.unregister(ref)
             let hotkey = GlobalHotkey(api: cgBackend)
             defer { hotkey.stop() }
+            #expect(hotkey.register(shortcut))
 
             var callCount = 0
             hotkey.onPressed = { callCount += 1 }

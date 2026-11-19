@@ -78,6 +78,7 @@ struct SecureInputTests {
 
             let hotkey = GlobalHotkey(api: cgBackend)
             defer { hotkey.stop() }
+            #expect(hotkey.register(shortcut))
 
             var pressedCalled = false
             hotkey.onPressed = { pressedCalled = true }
