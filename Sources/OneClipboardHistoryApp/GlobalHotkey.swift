@@ -2,16 +2,30 @@ import AppKit
 import Carbon
 
 @MainActor
-struct HotkeyRegistrationAPI {
-    var register: (KeyboardShortcut, EventHotKeyID, UInt32) -> (OSStatus, EventHotKeyRef?)
-    var unregister: (EventHotKeyRef) -> OSStatus
+protocol HotkeyRegistrationAPI {
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?)
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus
+}
 
-    static let carbon = Self(register: { shortcut, identifier, options in
+@MainActor
+struct CarbonBackend: HotkeyRegistrationAPI {
+    static let shared = CarbonBackend()
+    private init() {}
+
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?) {
         var reference: EventHotKeyRef?
         let status = RegisterEventHotKey(shortcut.keyCode, shortcut.modifiers, identifier,
                                          GetApplicationEventTarget(), options, &reference)
         return (status, reference)
-    }, unregister: { UnregisterEventHotKey($0) })
+    }
+
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus {
+        UnregisterEventHotKey(reference)
+    }
 }
 
 @MainActor
@@ -29,7 +43,7 @@ final class GlobalHotkey {
     var hasActiveShortcut: Bool { !stopped && reference != nil && cleanupReferences.isEmpty }
     var onPressed: (() -> Void)?
 
-    init(api: HotkeyRegistrationAPI = .carbon) {
+    init(api: HotkeyRegistrationAPI = CarbonBackend.shared) {
         self.api = api
         Self.nextID &+= 1
         eventID = Self.nextID
@@ -120,7 +134,8 @@ final class GlobalHotkey {
         // Nonexclusive Carbon registrations can report success while another
         // app's exclusive registration suppresses all of our notifications.
         let (status, next) = api.register(shortcut,
-            EventHotKeyID(signature: 0x4D434D48, id: eventID), UInt32(kEventHotKeyExclusive))
+            identifier: EventHotKeyID(signature: 0x4D434D48, id: eventID),
+            options: UInt32(kEventHotKeyExclusive))
         guard status == noErr, let next else {
             lastError = status == noErr ? OSStatus(eventNotHandledErr) : status
             return nil

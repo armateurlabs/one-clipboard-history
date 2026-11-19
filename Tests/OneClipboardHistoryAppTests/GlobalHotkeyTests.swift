@@ -9,7 +9,7 @@ struct GlobalHotkeyTests {
     @Test func registeredHandlerRoutesOnlyOurSignature() async throws {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         var count = 0
@@ -25,7 +25,7 @@ struct GlobalHotkeyTests {
 
     @Test func stoppingRemovesTheCarbonHandler() async throws {
         _ = NSApplication.shared
-        let hotkey = GlobalHotkey(api: FakeRegistrations().api)
+        let hotkey = GlobalHotkey(api: FakeRegistrations())
         #expect(hotkey.register(shortcut(12)))
         var called = false
         hotkey.onPressed = { called = true }
@@ -40,7 +40,7 @@ struct GlobalHotkeyTests {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
         backend.unavailable.insert(12)
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(!hotkey.register(shortcut(12)))
         #expect(hotkey.currentShortcut == nil)
@@ -51,7 +51,7 @@ struct GlobalHotkeyTests {
     @Test func labelOnlyUpdatesDoNotRegisterTheSamePhysicalKeyTwice() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         var relabeled = shortcut(12)
@@ -66,7 +66,7 @@ struct GlobalHotkeyTests {
         _ = NSApplication.shared
         for recording in [false, true] {
             let backend = FakeRegistrations()
-            let hotkey = GlobalHotkey(api: backend.api)
+            let hotkey = GlobalHotkey(api: backend)
             #expect(hotkey.register(shortcut(12)))
             if recording { hotkey.suspend() }
             backend.unavailable.insert(13)
@@ -80,7 +80,7 @@ struct GlobalHotkeyTests {
     @Test func failedRollbackHonestlyHasNoActiveKeyAndCanRetry() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         hotkey.suspend()
@@ -95,7 +95,7 @@ struct GlobalHotkeyTests {
     @Test func forcedRecoveryReacquiresTheNativeRegistration() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         #expect(hotkey.register(shortcut(12), force: true))
@@ -106,7 +106,7 @@ struct GlobalHotkeyTests {
     @Test func transientRecoveryFailureGetsOneBoundedRestorationAttempt() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.failNextRegistration = true
@@ -119,7 +119,7 @@ struct GlobalHotkeyTests {
     @Test func refusedUnregisterRetainsTheNativeHandleForALaterRetry() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.refuseUnregister = true
@@ -135,7 +135,7 @@ struct GlobalHotkeyTests {
     @Test func refusedRemovalNeverForgetsAProvisionalReplacementHandle() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         #expect(hotkey.register(shortcut(12)))
         backend.refuseUnregister = true
         #expect(!hotkey.register(shortcut(13)))
@@ -153,7 +153,7 @@ struct GlobalHotkeyTests {
     @Test func staleNativeReferenceCanBeReacquiredWhenUnregisterRefusesIt() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.active.removeAll() // The OS no longer owns the cached reference.
@@ -197,7 +197,7 @@ struct GlobalHotkeyTests {
 }
 
 @MainActor
-private final class FakeRegistrations {
+private final class FakeRegistrations: HotkeyRegistrationAPI {
     var unavailable: Set<UInt32> = []
     var active: [EventHotKeyRef: KeyboardShortcut] = [:]
     var requests: [(key: UInt32, options: UInt32)] = []
@@ -205,28 +205,30 @@ private final class FakeRegistrations {
     var refuseUnregister = false
     private var serial = 100
 
-    var api: HotkeyRegistrationAPI {
-        .init(register: { [self] shortcut, _, options in
-            requests.append((shortcut.keyCode, options))
-            if failNextRegistration {
-                failNextRegistration = false
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            // Carbon's nonexclusive mode may succeed but deliver no events.
-            if unavailable.contains(shortcut.keyCode), options & UInt32(kEventHotKeyExclusive) != 0 {
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            if active.values.contains(where: { $0.hasSameKeyCombination(as: shortcut) }) {
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            serial += 1
-            let reference = EventHotKeyRef(bitPattern: serial)!
-            active[reference] = shortcut
-            return (noErr, reference)
-        }, unregister: { [self] reference in
-            if refuseUnregister { return OSStatus(paramErr) }
-            active.removeValue(forKey: reference)
-            return noErr
-        })
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?) {
+        requests.append((shortcut.keyCode, options))
+        if failNextRegistration {
+            failNextRegistration = false
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        // Carbon's nonexclusive mode may succeed but deliver no events.
+        if unavailable.contains(shortcut.keyCode), options & UInt32(kEventHotKeyExclusive) != 0 {
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        if active.values.contains(where: { $0.hasSameKeyCombination(as: shortcut) }) {
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        serial += 1
+        let reference = EventHotKeyRef(bitPattern: serial)!
+        active[reference] = shortcut
+        return (noErr, reference)
+    }
+
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus {
+        if refuseUnregister { return OSStatus(paramErr) }
+        active.removeValue(forKey: reference)
+        return noErr
     }
 }
