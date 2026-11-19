@@ -163,3 +163,10 @@
 "macOS did not enable launch at login." = "macOS did not enable launch at login.";
 "Could not change launch at login: %@" = "Could not change launch at login: %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Open One Clipboard History to allow clipboard access and start capturing.";
+"Global shortcut disabled while password field has focus." = "Global shortcut disabled while password field has focus.";
+"Hotkey backend" = "Hotkey backend";
+"CGEventTap" = "CGEventTap";
+"Carbon" = "Carbon";
+"CGEventTap uses CoreGraphics event tapping. Works in most text fields." = "CGEventTap uses CoreGraphics event tapping. Works in most text fields.";
+"Carbon event hotkeys may not work in some apps." = "Carbon event hotkeys may not work in some apps.";
+"Open Accessibility Settings…" = "Open Accessibility Settings…";

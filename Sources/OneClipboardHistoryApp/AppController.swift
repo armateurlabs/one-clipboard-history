@@ -93,6 +93,11 @@ final class AppController {
             guard let self, !isRecordingShortcut else { return }
             toggle()
         }
+        hotkey.onSecureInputDetected = { [weak self] in
+            guard let self else { return }
+            setStatus("Global shortcut disabled while password field has focus.")
+        }
+        settings.hotkeyBackendType = hotkey.backendType
         configureHotkey()
         buildMenu()
         lastExternalApplication = NSWorkspace.shared.frontmostApplication
@@ -490,7 +495,10 @@ final class AppController {
         guard !demo, !shuttingDown, !isRecordingShortcut else { return }
         if hotkey.register(settings.shortcut, force: force) {
             settings.shortcutError = nil
-            if statusMessage == "Shortcut unavailable: choose another one in Settings." { setStatus(nil) }
+            if statusMessage == "Shortcut unavailable: choose another one in Settings." ||
+               statusMessage == "Global shortcut disabled while password field has focus." {
+                setStatus(nil)
+            }
         } else {
             settings.shortcutError = !hotkey.hasActiveShortcut
                 ? "Shortcut unavailable. Choose a different shortcut."
@@ -504,6 +512,7 @@ final class AppController {
         loginItem.refresh()
         if settingsWindow == nil {
             let view = SettingsView(settings: settings, loginItem: loginItem, onAccessibility: { [weak self] in self?.requestAccessibility() },
+                onHotkeyBackendTypeChange: { [weak self] in self?.settings.hotkeyBackendType = self?.hotkey.backendType ?? .carbon },
                 onPasteboardSettings: { [weak self] in
                     guard self?.demo == false else { return }
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Pasteboard") {

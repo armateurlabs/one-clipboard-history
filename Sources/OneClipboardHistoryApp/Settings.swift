@@ -105,6 +105,7 @@ final class AppSettings: ObservableObject {
     @Published var language: AppLanguage { didSet { save() } }
     @Published var shortcut: KeyboardShortcut { didSet { save() } }
     @Published var shortcutError: String?
+    var hotkeyBackendType: GlobalHotkey.BackendType = .carbon
     var savedFrame: NSRect? {
         get { defaults.string(forKey: "windowFrame").map(NSRectFromString) }
         set { defaults.set(newValue.map(NSStringFromRect), forKey: "windowFrame") }
