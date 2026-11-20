@@ -37,6 +37,8 @@ If the shortcut types an Option character or does not open history, use the menu
 
 The saved preference is the requested shortcut; the app tracks the current native registration separately. Exclusive registration exposes conflicts instead of silently accepting an ineffective binding. A failed replacement keeps or attempts to restore the previous registered combination when available, and reports when none remains active. Wake and app activation refresh the native registration.
 
+The app registers the shortcut through a CGEventTap backend when the event tap can be created, and falls back to the Carbon `EventHotKey` backend otherwise; Settings shows the active backend. The CGEventTap path swallows the matched key press so the focused app receives no stray combination. Secure-input contexts (password fields, Keychain dialogs) block global keyboard observation by design; the app reports the shortcut as temporarily unavailable there.
+
 The registration contract lives in [GlobalHotkey.swift](Sources/OneClipboardHistoryApp/GlobalHotkey.swift) (`register`, `suspend`, `currentShortcut`), [AppController.configureHotkey](Sources/OneClipboardHistoryApp/AppController.swift) and [RecorderButton.cancelRecording](Sources/OneClipboardHistoryApp/SettingsView.swift).
 
 ## Languages
@@ -49,7 +51,7 @@ System language follows the first supported macOS language preference and falls 
 
 Download the ZIP from [Releases](https://github.com/armateurlabs/one-clipboard-history/releases), extract it and move **One Clipboard History.app** into Applications. Quit the previous version before replacing it.
 
-**Version 1.0.2 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
+**Version 1.1.0 signing status:** the GitHub build is locally signed (ad hoc). Developer ID signing and notarization require an Apple certificate; this is not a Gatekeeper-validated distribution. A Mac App Store variant is being prepared, without claiming Store availability. See [Store preparation](docs/APP_STORE.md) and [validation evidence](docs/VALIDATION.md).
 
 The app starts in the menu bar. Closing its window keeps capture running; **Quit One Clipboard History** stops it. Settings → General offers optional silent launch at login and respects changes made in macOS.
 
