@@ -6,16 +6,19 @@ struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var loginItem: LoginItemController
     let onAccessibility: () -> Void
+    let onHotkeyBackendTypeChange: () -> Void
     let onPasteboardSettings: () -> Void
     let onClear: () -> Void
     let onImportHistory: (() -> Void)?
 
     init(settings: AppSettings, loginItem: LoginItemController = .preview(),
-         onAccessibility: @escaping () -> Void, onPasteboardSettings: @escaping () -> Void,
+         onAccessibility: @escaping () -> Void, onHotkeyBackendTypeChange: @escaping () -> Void,
+         onPasteboardSettings: @escaping () -> Void,
          onClear: @escaping () -> Void, onImportHistory: (() -> Void)? = nil) {
         self.settings = settings
         self.loginItem = loginItem
         self.onAccessibility = onAccessibility
+        self.onHotkeyBackendTypeChange = onHotkeyBackendTypeChange
         self.onPasteboardSettings = onPasteboardSettings
         self.onClear = onClear
         self.onImportHistory = onImportHistory
@@ -60,6 +63,28 @@ struct SettingsView: View {
                     }).frame(width: 180, height: 26)
                 }
                 if let error = settings.shortcutError { Text(L10n.text(error)).font(.caption).foregroundStyle(.red) }
+                LabeledContent(L10n.text("Hotkey backend")) {
+                    HStack(spacing: 4) {
+                        Text(settings.hotkeyBackendType == .cgEventTap
+                             ? L10n.text("CGEventTap") : L10n.text("Carbon"))
+                        if settings.hotkeyBackendType == .cgEventTap {
+                            Image(systemName: "info.circle")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                                .help(L10n.text("CGEventTap uses CoreGraphics event tapping. Works in most text fields."))
+                        } else {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.caption)
+                                .foregroundStyle(.yellow)
+                                .help(L10n.text("Carbon event hotkeys may not work in some apps."))
+                        }
+                    }
+                }
+                if settings.hotkeyBackendType == .carbon {
+                    Button(L10n.text("Open Accessibility Settings…"), action: onAccessibility)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Toggle(L10n.text("Open at the mouse pointer"), isOn: $settings.positionAtPointer)
                 LabeledContent(L10n.text("Window position around pointer")) {
                     PointerQuadrantPicker(selection: $settings.pointerQuadrant)

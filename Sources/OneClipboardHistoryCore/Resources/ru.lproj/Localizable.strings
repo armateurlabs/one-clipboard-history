@@ -163,3 +163,10 @@
 "macOS did not enable launch at login." = "macOS не включила запуск при входе.";
 "Could not change launch at login: %@" = "Не удалось изменить запуск при входе: %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Откройте One Clipboard History, чтобы разрешить доступ к буферу обмена и начать сохранение копий.";
+"Global shortcut disabled while password field has focus." = "Глобальная комбинация отключена, пока активен поле ввода пароля.";
+"Hotkey backend" = "Бэкенд горячей клавиши";
+"CGEventTap" = "CGEventTap";
+"Carbon" = "Carbon";
+"CGEventTap uses CoreGraphics event tapping. Works in most text fields." = "CGEventTap использует перехват событий CoreGraphics. Работает в большинстве текстовых полей.";
+"Carbon event hotkeys may not work in some apps." = "Горячие клавиши Carbon могут не работать в некоторых приложениях.";
+"Open Accessibility Settings…" = "Открыть настройки специальных возможностей…";

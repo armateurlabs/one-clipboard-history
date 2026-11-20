@@ -163,3 +163,10 @@
 "macOS did not enable launch at login." = "macOS 未启用登录时启动。";
 "Could not change launch at login: %@" = "无法更改登录时启动设置：%@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "打开 One Clipboard History，允许访问剪贴板并开始采集。";
+"Global shortcut disabled while password field has focus." = "全局快捷键在密码字段聚焦时禁用。";
+"Hotkey backend" = "快捷键后端";
+"CGEventTap" = "CGEventTap";
+"Carbon" = "Carbon";
+"CGEventTap uses CoreGraphics event tapping. Works in most text fields." = "CGEventTap 使用 CoreGraphics 事件捕获。在大多数文本字段中有效。";
+"Carbon event hotkeys may not work in some apps." = "Carbon 事件快捷键在某些应用中可能无效。";
+"Open Accessibility Settings…" = "打开辅助功能设置…";

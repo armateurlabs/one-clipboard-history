@@ -162,4 +162,11 @@
 "Launch at login is unavailable. Open the installed One Clipboard History application and try again." = "L’avvio all’accesso non è disponibile. Apri l’applicazione One Clipboard History installata e riprova.";
 "macOS did not enable launch at login." = "macOS non ha attivato l’avvio all’accesso.";
 "Could not change launch at login: %@" = "Impossibile modificare l’avvio all’accesso: %@";
-"Open One Clipboard History to allow clipboard access and start capturing." = "Apri One Clipboard History per consentire l’accesso agli appunti e iniziare l’acquisizione.";
+"Open One Clipboard History to allow clipboard access and start capturing." = "Apri One Clipboard History per consentire l'accesso agli appunti e iniziare l'acquisizione.";
+"Global shortcut disabled while password field has focus." = "La scorciatoia globale è disabilitata quando un campo di password è attivo.";
+"Hotkey backend" = "Backend del tasto rapido";
+"CGEventTap" = "CGEventTap";
+"Carbon" = "Carbon";
+"CGEventTap uses CoreGraphics event tapping. Works in most text fields." = "CGEventTap utilizza il rilevamento eventi CoreGraphics. Funziona nella maggior parte dei campi di testo.";
+"Carbon event hotkeys may not work in some apps." = "I tasti rapidi Carbon potrebbero non funzionare in alcune app.";
+"Open Accessibility Settings…" = "Apri impostazioni accessibilità…";

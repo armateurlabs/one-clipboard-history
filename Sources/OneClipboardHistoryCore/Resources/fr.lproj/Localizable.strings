@@ -162,4 +162,11 @@
 "Launch at login is unavailable. Open the installed One Clipboard History application and try again." = "Le lancement à l’ouverture de session est indisponible. Ouvrez l’application One Clipboard History installée et réessayez.";
 "macOS did not enable launch at login." = "macOS n’a pas activé le lancement à l’ouverture de session.";
 "Could not change launch at login: %@" = "Impossible de modifier le lancement à l’ouverture de session : %@";
-"Open One Clipboard History to allow clipboard access and start capturing." = "Ouvrez One Clipboard History pour autoriser l’accès au presse-papiers et démarrer la capture.";
+"Open One Clipboard History to allow clipboard access and start capturing." = "Ouvrez One Clipboard History pour autoriser l'accès au presse-papiers et démarrer la capture.";
+"Global shortcut disabled while password field has focus." = "Raccourci global désactivé lorsqu'un champ de mot de passe est actif.";
+"Hotkey backend" = "Backend du raccourci";
+"CGEventTap" = "CGEventTap";
+"Carbon" = "Carbon";
+"CGEventTap uses CoreGraphics event tapping. Works in most text fields." = "CGEventTap utilise le piégeage d'événements CoreGraphics. Fonctionne dans la plupart des champs de texte.";
+"Carbon event hotkeys may not work in some apps." = "Les raccourcis Carbon peuvent ne pas fonctionner dans certaines applications.";
+"Open Accessibility Settings…" = "Ouvrir les paramètres d'accessibilité…";

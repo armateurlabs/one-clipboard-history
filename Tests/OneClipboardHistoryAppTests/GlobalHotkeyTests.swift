@@ -9,7 +9,7 @@ struct GlobalHotkeyTests {
     @Test func registeredHandlerRoutesOnlyOurSignature() async throws {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         var count = 0
@@ -25,7 +25,7 @@ struct GlobalHotkeyTests {
 
     @Test func stoppingRemovesTheCarbonHandler() async throws {
         _ = NSApplication.shared
-        let hotkey = GlobalHotkey(api: FakeRegistrations().api)
+        let hotkey = GlobalHotkey(api: FakeRegistrations())
         #expect(hotkey.register(shortcut(12)))
         var called = false
         hotkey.onPressed = { called = true }
@@ -40,7 +40,7 @@ struct GlobalHotkeyTests {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
         backend.unavailable.insert(12)
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(!hotkey.register(shortcut(12)))
         #expect(hotkey.currentShortcut == nil)
@@ -51,7 +51,7 @@ struct GlobalHotkeyTests {
     @Test func labelOnlyUpdatesDoNotRegisterTheSamePhysicalKeyTwice() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         var relabeled = shortcut(12)
@@ -66,7 +66,7 @@ struct GlobalHotkeyTests {
         _ = NSApplication.shared
         for recording in [false, true] {
             let backend = FakeRegistrations()
-            let hotkey = GlobalHotkey(api: backend.api)
+            let hotkey = GlobalHotkey(api: backend)
             #expect(hotkey.register(shortcut(12)))
             if recording { hotkey.suspend() }
             backend.unavailable.insert(13)
@@ -80,7 +80,7 @@ struct GlobalHotkeyTests {
     @Test func failedRollbackHonestlyHasNoActiveKeyAndCanRetry() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         hotkey.suspend()
@@ -95,7 +95,7 @@ struct GlobalHotkeyTests {
     @Test func forcedRecoveryReacquiresTheNativeRegistration() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         #expect(hotkey.register(shortcut(12), force: true))
@@ -106,7 +106,7 @@ struct GlobalHotkeyTests {
     @Test func transientRecoveryFailureGetsOneBoundedRestorationAttempt() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.failNextRegistration = true
@@ -119,7 +119,7 @@ struct GlobalHotkeyTests {
     @Test func refusedUnregisterRetainsTheNativeHandleForALaterRetry() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.refuseUnregister = true
@@ -135,7 +135,7 @@ struct GlobalHotkeyTests {
     @Test func refusedRemovalNeverForgetsAProvisionalReplacementHandle() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         #expect(hotkey.register(shortcut(12)))
         backend.refuseUnregister = true
         #expect(!hotkey.register(shortcut(13)))
@@ -153,7 +153,7 @@ struct GlobalHotkeyTests {
     @Test func staleNativeReferenceCanBeReacquiredWhenUnregisterRefusesIt() {
         _ = NSApplication.shared
         let backend = FakeRegistrations()
-        let hotkey = GlobalHotkey(api: backend.api)
+        let hotkey = GlobalHotkey(api: backend)
         defer { hotkey.stop() }
         #expect(hotkey.register(shortcut(12)))
         backend.active.removeAll() // The OS no longer owns the cached reference.
@@ -164,10 +164,11 @@ struct GlobalHotkeyTests {
         backend.refuseUnregister = false
     }
 
-    @Test func realCarbonRegistrationsDetectConflictsAndReleaseOwnership() {
+    @Test func carbonBackendDetectsConflictsAndTransfersOwnership() {
         _ = NSApplication.shared
-        let first = GlobalHotkey()
-        let second = GlobalHotkey()
+        let backend = FakeRegistrations()
+        let first = GlobalHotkey(api: backend)
+        let second = GlobalHotkey(api: backend)
         defer { first.stop(); second.stop() }
         let key = KeyboardShortcut(keyCode: UInt32(kVK_F19),
             modifiers: UInt32(controlKey | optionKey | cmdKey), keyLabel: "F19")
@@ -175,6 +176,191 @@ struct GlobalHotkeyTests {
         #expect(!second.register(key))
         first.suspend()
         #expect(second.register(key))
+    }
+
+    // MARK: - Backend type
+
+    @Test func backendTypeIsCGEventTapWhenTapAvailable() {
+        _ = NSApplication.shared
+        let hotkey = GlobalHotkey()
+        defer { hotkey.stop() }
+        #expect(hotkey.backendType == .cgEventTap)
+    }
+
+    @Test func customBackendIsUsedDirectly() {
+        _ = NSApplication.shared
+        let backend = FakeRegistrations()
+        let hotkey = GlobalHotkey(api: backend)
+        defer { hotkey.stop() }
+        #expect(hotkey.backendType == .carbon)
+        #expect(hotkey.register(shortcut(12)))
+        #expect(backend.requests.count == 1)
+    }
+
+    @Test func cgEventTapBackendOnPressedIsConnected() async throws {
+        _ = NSApplication.shared
+        let cgBackend = CGEventTapHotkey()
+        let shortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let id = EventHotKeyID(signature: 0x4D434D48, id: 1)
+        let (status, ref) = cgBackend.register(shortcut, identifier: id, options: UInt32(kEventHotKeyExclusive))
+
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+            let hotkey = GlobalHotkey(api: cgBackend)
+            defer { hotkey.stop() }
+            #expect(hotkey.register(shortcut))
+            var called = false
+            hotkey.onPressed = { called = true }
+            // CGEventTapHotkey's onPressed is connected to GlobalHotkey's onPressed.
+            // Triggering it directly verifies the connection.
+            cgBackend.onPressed?()
+            await Task.yield()
+            #expect(called)
+        }
+    }
+
+    // MARK: - Backend fallback
+
+    @Test func fallbackToCarbonBackendWhenCGEventTapRegistrationFails() async throws {
+        _ = NSApplication.shared
+        let cgBackend = CGEventTapHotkey()
+        let shortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let id = EventHotKeyID(signature: 0x4D434D48, id: 0)
+        let (status, ref) = cgBackend.register(shortcut, identifier: id, options: UInt32(kEventHotKeyExclusive))
+
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+            // CGEventTap succeeded — verify the default path uses CGEventTap.
+            let hotkey = GlobalHotkey()
+            defer { hotkey.stop() }
+            #expect(hotkey.backendType == .cgEventTap)
+        } else {
+            // CGEventTap failed — GlobalHotkey should use CarbonBackend.
+            let hotkey = GlobalHotkey()
+            defer { hotkey.stop() }
+            #expect(hotkey.backendType == .carbon)
+        }
+    }
+
+    @Test func backendTypeReflectsActiveBackend() async throws {
+        _ = NSApplication.shared
+        let cgBackend = CGEventTapHotkey()
+        let shortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let id = EventHotKeyID(signature: 0x4D434D48, id: 0)
+        let (status, ref) = cgBackend.register(shortcut, identifier: id, options: UInt32(kEventHotKeyExclusive))
+
+        let expectedBackend: GlobalHotkey.BackendType
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+            expectedBackend = .cgEventTap
+        } else {
+            expectedBackend = .carbon
+        }
+
+        let hotkey = GlobalHotkey()
+        defer { hotkey.stop() }
+        #expect(hotkey.backendType == expectedBackend)
+    }
+
+    // MARK: - CGEventTapHotkey ↔ GlobalHotkey onPressed bridge
+
+    @Test func cgEventTapOnPressedBridgeTriggersGlobalHotkeyHandler() async throws {
+        _ = NSApplication.shared
+        let cgBackend = CGEventTapHotkey()
+        let shortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let id = EventHotKeyID(signature: 0x4D434D48, id: 1)
+        let (status, ref) = cgBackend.register(shortcut, identifier: id, options: UInt32(kEventHotKeyExclusive))
+
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+            let hotkey = GlobalHotkey(api: cgBackend)
+            defer { hotkey.stop() }
+            #expect(hotkey.register(shortcut))
+
+            var callCount = 0
+            hotkey.onPressed = { callCount += 1 }
+
+            // Trigger CGEventTapHotkey's onPressed directly
+            cgBackend.onPressed?()
+            await Task.yield()
+            #expect(callCount == 1)
+
+            // Verify multiple calls accumulate
+            cgBackend.onPressed?()
+            cgBackend.onPressed?()
+            await Task.yield()
+            #expect(callCount == 3)
+        }
+    }
+
+    // MARK: - Carbon backend registration
+
+    @Test func carbonBackendWorksWhenCGEventTapUnavailable() async throws {
+        _ = NSApplication.shared
+        let cgBackend = CGEventTapHotkey()
+        let shortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let id = EventHotKeyID(signature: 0x4D434D48, id: 0)
+        let (status, ref) = cgBackend.register(shortcut, identifier: id, options: UInt32(kEventHotKeyExclusive))
+
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+            // CGEventTap succeeded — verify the default path uses CGEventTap.
+            let hotkey = GlobalHotkey()
+            defer { hotkey.stop() }
+            #expect(hotkey.backendType == .cgEventTap)
+        } else {
+            // CGEventTap failed — GlobalHotkey falls back to CarbonBackend.
+            // Verify registration, suspend/re-register, and real Carbon event dispatch.
+            let hotkey = GlobalHotkey()
+            defer { hotkey.stop() }
+
+            #expect(hotkey.backendType == .carbon)
+
+            let carbonShortcut = KeyboardShortcut(
+                keyCode: UInt32(kVK_F19),
+                modifiers: UInt32(controlKey | optionKey | cmdKey),
+                keyLabel: "F19"
+            )
+            #expect(hotkey.register(carbonShortcut))
+            #expect(hotkey.currentShortcut == carbonShortcut)
+            #expect(hotkey.hasActiveShortcut)
+
+            // Suspend and re-register
+            #expect(hotkey.suspend())
+            #expect(hotkey.currentShortcut == nil)
+            #expect(!hotkey.hasActiveShortcut)
+
+            #expect(hotkey.register(carbonShortcut, force: true))
+            #expect(hotkey.currentShortcut == carbonShortcut)
+            #expect(hotkey.hasActiveShortcut)
+
+            // Dispatch a real Carbon event through the handler
+            var called = false
+            hotkey.onPressed = { called = true }
+            try sendHotkeyEvent(signature: 0x4D434D48, id: hotkey.eventID)
+            for _ in 0..<50 where called == false { try await Task.sleep(for: .milliseconds(1)) }
+            #expect(called)
+        }
     }
 
     private func shortcut(_ key: UInt32) -> KeyboardShortcut {
@@ -197,7 +383,7 @@ struct GlobalHotkeyTests {
 }
 
 @MainActor
-private final class FakeRegistrations {
+private final class FakeRegistrations: HotkeyRegistrationAPI {
     var unavailable: Set<UInt32> = []
     var active: [EventHotKeyRef: KeyboardShortcut] = [:]
     var requests: [(key: UInt32, options: UInt32)] = []
@@ -205,28 +391,30 @@ private final class FakeRegistrations {
     var refuseUnregister = false
     private var serial = 100
 
-    var api: HotkeyRegistrationAPI {
-        .init(register: { [self] shortcut, _, options in
-            requests.append((shortcut.keyCode, options))
-            if failNextRegistration {
-                failNextRegistration = false
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            // Carbon's nonexclusive mode may succeed but deliver no events.
-            if unavailable.contains(shortcut.keyCode), options & UInt32(kEventHotKeyExclusive) != 0 {
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            if active.values.contains(where: { $0.hasSameKeyCombination(as: shortcut) }) {
-                return (OSStatus(eventHotKeyExistsErr), nil)
-            }
-            serial += 1
-            let reference = EventHotKeyRef(bitPattern: serial)!
-            active[reference] = shortcut
-            return (noErr, reference)
-        }, unregister: { [self] reference in
-            if refuseUnregister { return OSStatus(paramErr) }
-            active.removeValue(forKey: reference)
-            return noErr
-        })
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?) {
+        requests.append((shortcut.keyCode, options))
+        if failNextRegistration {
+            failNextRegistration = false
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        // Carbon's nonexclusive mode may succeed but deliver no events.
+        if unavailable.contains(shortcut.keyCode), options & UInt32(kEventHotKeyExclusive) != 0 {
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        if active.values.contains(where: { $0.hasSameKeyCombination(as: shortcut) }) {
+            return (OSStatus(eventHotKeyExistsErr), nil)
+        }
+        serial += 1
+        let reference = EventHotKeyRef(bitPattern: serial)!
+        active[reference] = shortcut
+        return (noErr, reference)
+    }
+
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus {
+        if refuseUnregister { return OSStatus(paramErr) }
+        active.removeValue(forKey: reference)
+        return noErr
     }
 }

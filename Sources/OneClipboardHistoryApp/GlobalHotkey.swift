@@ -2,22 +2,49 @@ import AppKit
 import Carbon
 
 @MainActor
-struct HotkeyRegistrationAPI {
-    var register: (KeyboardShortcut, EventHotKeyID, UInt32) -> (OSStatus, EventHotKeyRef?)
-    var unregister: (EventHotKeyRef) -> OSStatus
+protocol HotkeyRegistrationAPI {
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?)
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus
+}
 
-    static let carbon = Self(register: { shortcut, identifier, options in
+@MainActor
+struct CarbonBackend: HotkeyRegistrationAPI {
+    static let shared = CarbonBackend()
+    private init() {}
+
+    func register(_ shortcut: KeyboardShortcut,
+                  identifier: EventHotKeyID,
+                  options: UInt32) -> (OSStatus, EventHotKeyRef?) {
         var reference: EventHotKeyRef?
         let status = RegisterEventHotKey(shortcut.keyCode, shortcut.modifiers, identifier,
                                          GetApplicationEventTarget(), options, &reference)
         return (status, reference)
-    }, unregister: { UnregisterEventHotKey($0) })
+    }
+
+    func unregister(_ reference: EventHotKeyRef) -> OSStatus {
+        UnregisterEventHotKey(reference)
+    }
 }
 
 @MainActor
 final class GlobalHotkey {
+
+    // MARK: - Backend type
+
+    /// Indicates which backend is currently active.
+    enum BackendType {
+        case carbon
+        case cgEventTap
+    }
+
+    // MARK: - Properties
+
     private static var nextID: UInt32 = 0
     nonisolated let eventID: UInt32
+    private(set) var backendType: BackendType = .carbon
+
     private var reference: EventHotKeyRef?
     private var handler: EventHandlerRef?
     private let api: HotkeyRegistrationAPI
@@ -28,16 +55,90 @@ final class GlobalHotkey {
     private(set) var lastError: OSStatus?
     var hasActiveShortcut: Bool { !stopped && reference != nil && cleanupReferences.isEmpty }
     var onPressed: (() -> Void)?
+    var onSecureInputDetected: (() -> Void)?
 
-    init(api: HotkeyRegistrationAPI = .carbon) {
-        self.api = api
+    /// Checks whether macOS is currently in secure-input mode.
+    /// Calls ``onSecureInputDetected`` when secure input is active so that
+    /// the app can inform the user that the shortcut is temporarily disabled.
+    func checkSecureInput() {
+        guard !stopped else { return }
+        if CGEventTapHotkey.isSecureInputActive() {
+            onSecureInputDetected?()
+        }
+    }
+
+    // MARK: - Init
+
+    init(api: HotkeyRegistrationAPI = CarbonBackend.shared) {
+        let selectedApi = Self.selectBackend(api: api)
+        self.api = selectedApi
+        self.backendType = selectedApi is CGEventTapHotkey ? .cgEventTap : .carbon
+
         Self.nextID &+= 1
         eventID = Self.nextID
         _ = installHandlerIfNeeded()
+
+        // Connect CGEventTapHotkey's onPressed to GlobalHotkey's onPressed,
+        // but guard against macOS secure-input mode (password fields, Keychain)
+        // and against inactive state (fix #6: parity with Carbon handler).
+        if let cgBackend = selectedApi as? CGEventTapHotkey {
+            cgBackend.onPressed = { [weak self] in
+                guard let self, self.hasActiveShortcut else { return }
+                if CGEventTapHotkey.isSecureInputActive() {
+                    self.onSecureInputDetected?()
+                } else {
+                    self.onPressed?()
+                }
+            }
+        }
     }
+
+    /// Cached result of the CGEventTap availability probe (fix #9:
+    /// avoid a side-effecting probe on every init).
+    private static var cachedCGEventTapAvailable: Bool?
+
+    /// Select the best available backend.
+    ///
+    /// If a custom API is provided (not ``CarbonBackend``), use it directly.
+    /// Otherwise try ``CGEventTapHotkey`` first and fall back to
+    /// ``CarbonBackend/shared`` when the tap cannot be created.
+    private static func selectBackend(api: HotkeyRegistrationAPI) -> HotkeyRegistrationAPI {
+        // Custom backend provided — use it as-is.
+        guard api is CarbonBackend else { return api }
+
+        // Use cached probe result if available.
+        if let cached = cachedCGEventTapAvailable {
+            return cached ? CGEventTapHotkey() : CarbonBackend.shared
+        }
+
+        // Try CGEventTapHotkey first (auto-detect path).
+        let cgBackend = CGEventTapHotkey()
+        let testShortcut = KeyboardShortcut(
+            keyCode: UInt32(kVK_ANSI_A),
+            modifiers: UInt32(optionKey),
+            keyLabel: "A"
+        )
+        let (status, ref) = cgBackend.register(testShortcut,
+            identifier: EventHotKeyID(signature: 0x4D434D48, id: 0),
+            options: UInt32(kEventHotKeyExclusive))
+
+        // Clean up the test registration.
+        if status == noErr, let ref {
+            _ = cgBackend.unregister(ref)
+        }
+
+        let available = status == noErr
+        cachedCGEventTapAvailable = available
+        return available ? cgBackend : CarbonBackend.shared
+    }
+
+    // MARK: - Event handler
 
     private func installHandlerIfNeeded() -> Bool {
         if handler != nil { return true }
+        // CGEventTapHotkey handles events through its own tap callback.
+        guard backendType == .carbon else { return true }
+
         var type = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         let installed = InstallEventHandler(GetApplicationEventTarget(), { _, event, context in
             guard let context, let event else { return OSStatus(eventNotHandledErr) }
@@ -57,20 +158,18 @@ final class GlobalHotkey {
         return installed == noErr && handler != nil
     }
 
+    // MARK: - Public API
+
     func register(_ shortcut: KeyboardShortcut, force: Bool = false) -> Bool {
         guard !stopped, installHandlerIfNeeded() else { return false }
         guard cleanUpProvisionalRegistrations() else { return false }
         if let currentShortcut, currentShortcut.hasSameKeyCombination(as: shortcut) {
             if !force {
-                // A changed display label is not a new Carbon binding.
                 self.currentShortcut = shortcut
                 lastError = nil
                 return true
             }
             if !suspend() {
-                // A stale OS reference may refuse removal even though its key
-                // no longer exists. Probe a fresh exclusive registration while
-                // retaining the old handle if that probe also fails.
                 let failure = lastError
                 guard let recovered = nativeRegistration(shortcut) else {
                     lastError = failure
@@ -82,11 +181,8 @@ final class GlobalHotkey {
                 return true
             }
         }
-        // Register first, so a conflict cannot remove the previous working shortcut.
         guard let next = nativeRegistration(shortcut) else {
             let failure = lastError
-            // Recording temporarily releases the old key so the recorder can
-            // receive it. If a replacement conflicts, restore the old binding.
             if reference == nil, let previous = suspendedShortcut,
                let restored = nativeRegistration(previous) {
                 reference = restored
@@ -103,8 +199,6 @@ final class GlobalHotkey {
         if let reference {
             let status = api.unregister(reference)
             if status != noErr {
-                // Keep the previous handle if replacement cannot be completed.
-                // Never forget a provisional handle, even if rollback also fails.
                 if api.unregister(next) != noErr { cleanupReferences.append(next) }
                 lastError = status
                 return false
@@ -117,10 +211,9 @@ final class GlobalHotkey {
     }
 
     private func nativeRegistration(_ shortcut: KeyboardShortcut) -> EventHotKeyRef? {
-        // Nonexclusive Carbon registrations can report success while another
-        // app's exclusive registration suppresses all of our notifications.
         let (status, next) = api.register(shortcut,
-            EventHotKeyID(signature: 0x4D434D48, id: eventID), UInt32(kEventHotKeyExclusive))
+            identifier: EventHotKeyID(signature: 0x4D434D48, id: eventID),
+            options: UInt32(kEventHotKeyExclusive))
         guard status == noErr, let next else {
             lastError = status == noErr ? OSStatus(eventNotHandledErr) : status
             return nil
@@ -159,7 +252,6 @@ final class GlobalHotkey {
             if status != noErr { lastError = status }
             return status != noErr
         }
-        // Suppress dispatch until an uncertain replacement is fully unwound.
         return cleanupReferences.isEmpty
     }
 }

@@ -34,7 +34,7 @@ struct AppAppearanceTests {
         }
         let settings = AppSettings(defaults: defaults)
         let hosting = NSHostingController(rootView: SettingsView(
-            settings: settings, onAccessibility: {}, onPasteboardSettings: {}, onClear: {}
+            settings: settings, onAccessibility: {}, onHotkeyBackendTypeChange: {}, onPasteboardSettings: {}, onClear: {}
         ))
         let window = NSWindow(contentViewController: hosting)
 
