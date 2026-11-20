@@ -118,7 +118,7 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
         // The run loop source is attached to RunLoop.main, so the callback
         // is guaranteed to run on the main thread. Use assumeIsolated to
         // satisfy Swift 6 actor isolation.
-        let result: Unmanaged<CGEvent> = MainActor.assumeIsolated {
+        let result: Unmanaged<CGEvent>? = MainActor.assumeIsolated {
             // Re-enable if macOS auto-disabled the tap.
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                 if let tap = strongSelf.tap {
@@ -127,24 +127,27 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
                 return Unmanaged.passUnretained(event)
             }
 
-            // Ignore key auto-repeat.
-            if type == .keyDown,
-               event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
-                return Unmanaged.passUnretained(event)
-            }
-
             // Check if this keyDown matches the registered shortcut.
             if type == .keyDown,
                let shortcut = strongSelf.shortcut,
                event.getIntegerValueField(.keyboardEventKeycode) == Int64(shortcut.keyCode),
                strongSelf.eventModifiersMatch(shortcut.modifiers) {
-                // Suppress the event by clearing its key code so the
-                // focused app receives no character. (The CGEventTap
-                // callback in this SDK returns a non-optional
-                // Unmanaged<CGEvent>, so we cannot return nil to drop
-                // the event entirely.)
-                event.setIntegerValueField(.keyboardEventKeycode, value: 0)
-                strongSelf.onPressed?()
+                // Drop the event entirely so the focused app receives no
+                // key press at all. Returning nil from a CGEventTap
+                // callback swallows the event; remapping the key code
+                // instead would deliver a stray (and usually unhandled)
+                // combination to the focused app, which plays the system
+                // alert sound. Fire the handler only on the initial
+                // press, not on auto-repeat.
+                if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+                    strongSelf.onPressed?()
+                }
+                return nil
+            }
+
+            // Ignore key auto-repeat.
+            if type == .keyDown,
+               event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
                 return Unmanaged.passUnretained(event)
             }
 
