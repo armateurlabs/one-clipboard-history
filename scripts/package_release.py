@@ -28,6 +28,11 @@ MANIFEST_KEYS = {
 VERSION_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\Z")
 HASH_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT_PATTERN = re.compile(r"[0-9a-f]{40}\Z")
+# Only these executables may ever be launched. subprocess.run is always called
+# with a fixed executable and an argument list (never a shell), so this is a
+# second line of defence: it turns the "fixed executable" convention into an
+# enforced invariant and rejects any attempt to run something else.
+COMMAND_EXECUTABLES = frozenset({"lipo", "codesign", "git", "ditto", "validate-app.sh"})
 
 
 def _require(condition: bool, message: str) -> None:
@@ -159,6 +164,11 @@ def _signing_category(description: str) -> str:
 
 
 def _command(arguments: list[str], *, cwd: Path | None = None, capture: bool = False) -> str:
+    # Run a fixed executable with an argument list (no shell): untrusted values
+    # are passed as separate argv entries and never interpreted by a shell.
+    _require(len(arguments) >= 1, "Command requires an executable")
+    executable = Path(arguments[0]).name
+    _require(executable in COMMAND_EXECUTABLES, f"Refusing to run an unapproved executable: {executable}")
     result = subprocess.run(arguments, cwd=cwd, check=True, text=True,
                             stdout=subprocess.PIPE if capture else sys.stderr,
                             stderr=subprocess.PIPE if capture else None)

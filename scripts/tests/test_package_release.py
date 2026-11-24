@@ -176,6 +176,18 @@ class MacPackagingGuardTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "only the arm64"):
                 package_release._require_arm64(value)
 
+    def test_command_only_runs_approved_executables(self):
+        with patch.object(package_release.subprocess, "run") as run:
+            run.return_value = package_release.subprocess.CompletedProcess(
+                args=["lipo"], returncode=0, stdout="arm64\n", stderr="")
+            self.assertEqual(package_release._command(["lipo", "-archs", "/app/bin"], capture=True), "arm64\n")
+            self.assertEqual(run.call_args[0][0], ["lipo", "-archs", "/app/bin"])
+        with self.assertRaisesRegex(ValueError, "requires an executable"):
+            package_release._command([])
+        for executable in ["sh", "bash", "rm", "/bin/sh", "evil.sh", "validate-app.sh; rm -rf /"]:
+            with self.subTest(executable=executable), self.assertRaisesRegex(ValueError, "unapproved executable"):
+                package_release._command([executable, "arg"])
+
     def test_signing_category_does_not_infer_notarization(self):
         self.assertEqual(package_release._signing_category("Signature=adhoc\n"), "ad-hoc")
         self.assertEqual(package_release._signing_category("Authority=Developer ID Application: Example\n"), "developer-id")
