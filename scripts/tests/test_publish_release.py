@@ -10,8 +10,10 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import publish_release
 from publish_release import PublicationError, publish_package
 
 
@@ -150,6 +152,22 @@ class PublicationTests(unittest.TestCase):
             with self.assertRaises(PublicationError):
                 self.publish(client)
             self.assertEqual(client.writes, [])
+
+
+class GitHubClientTests(unittest.TestCase):
+    def test_run_only_invokes_approved_subcommands(self):
+        client = publish_release.GitHub("owner/name")
+        with patch.object(publish_release.subprocess, "run") as run:
+            run.return_value = publish_release.subprocess.CompletedProcess(
+                args=["gh"], returncode=0, stdout="ok\n", stderr="")
+            self.assertEqual(client.run("api", "repos/owner/name"), "ok\n")
+            self.assertEqual(run.call_args[0][0], ["gh", "api", "repos/owner/name"])
+        with self.assertRaisesRegex(PublicationError, "requires a subcommand"):
+            client.run()
+        for subcommand in ["repo", "pr", "auth", "gist", "api; rm -rf /"]:
+            with self.subTest(subcommand=subcommand), \
+                    self.assertRaisesRegex(PublicationError, "unapproved gh subcommand"):
+                client.run(subcommand, "arg")
 
 
 if __name__ == "__main__":
