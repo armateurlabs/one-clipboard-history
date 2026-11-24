@@ -33,12 +33,24 @@ def validate_request(manifest: dict, metadata: dict, tag: str, commit: str) -> N
 
 
 class GitHub:
+    # Only these gh subcommands may ever be invoked. subprocess.run is always
+    # called with the fixed "gh" executable and an argument list (never a
+    # shell); the publish job also holds a write-scoped token, so this is a
+    # second line of defence that turns the "fixed executable" convention into
+    # an enforced invariant over which gh operations may run.
+    ALLOWED_SUBCOMMANDS = frozenset({"api", "release"})
+
     def __init__(self, repository: str):
         if re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) is None:
             raise PublicationError("Repository must use owner/name syntax")
         self.repository = repository
 
     def run(self, *arguments: str) -> str:
+        if not arguments:
+            raise PublicationError("GitHub CLI request requires a subcommand")
+        subcommand = arguments[0]
+        if subcommand not in self.ALLOWED_SUBCOMMANDS:
+            raise PublicationError(f"Refusing to run an unapproved gh subcommand: {subcommand}")
         result = subprocess.run(["gh", *arguments], text=True, capture_output=True)
         if result.returncode:
             raise PublicationError(result.stderr.strip() or "GitHub CLI request failed")
