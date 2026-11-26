@@ -164,6 +164,8 @@
 "Could not change launch at login: %@" = "无法更改登录时启动设置：%@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "打开 One Clipboard History，允许访问剪贴板并开始采集。";
 "Global shortcut disabled while password field has focus." = "全局快捷键在密码字段聚焦时禁用。";
+"Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut." = "全局快捷键已被阻止：安全输入很可能由 %@ 持有。退出该应用即可恢复快捷键。";
+"Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it." = "全局快捷键已被阻止：某个系统进程正在持有安全输入。锁定并解锁屏幕可能会释放它。";
 "Hotkey backend" = "快捷键后端";
 "CGEventTap" = "CGEventTap";
 "Carbon" = "Carbon";

@@ -13,16 +13,28 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
 
     // MARK: - Secure input detection
 
-    /// Returns true when macOS is in secure-input mode (e.g. a password
-    /// field or Keychain dialog has focus).  In this state the kernel
-    /// blocks all global event taps, so the hotkey cannot fire.
-    ///
-    /// Uses only the session dictionary check — no probe tap — to avoid
-    /// false positives when the process lacks Accessibility permission.
+    /// Returns true when some process (a password field, a stuck
+    /// loginwindow, a terminal with Secure Keyboard Entry...) holds macOS
+    /// secure event input. In this state the system hides keystrokes from
+    /// global event taps, so the shortcut cannot fire.
     static func isSecureInputActive() -> Bool {
-        guard let dict = CGSessionCopyCurrentDictionary() as NSDictionary?,
-              dict.count > 0 else { return true }
-        return false
+        IsSecureEventInputEnabled()
+    }
+
+    /// The process macOS reports as holding secure input, when any.
+    ///
+    /// `name` is nil for `loginwindow` (a catch-all: some startup agent or
+    /// daemon is asking for a password) and for processes without a
+    /// user-visible name. The attribution can be wrong: if a background
+    /// process enables secure input the system may blame the foreground app.
+    static func secureInputHolder() -> (pid: pid_t, name: String?)? {
+        guard IsSecureEventInputEnabled(),
+              let dict = CGSessionCopyCurrentDictionary() as? [String: Any],
+              let number = dict["kCGSSessionSecureInputPID"] as? NSNumber else { return nil }
+        let pid = pid_t(truncating: number)
+        let app = NSRunningApplication(processIdentifier: pid)
+        let name = app?.bundleIdentifier == "com.apple.loginwindow" ? nil : app?.localizedName
+        return (pid, name)
     }
 
     // MARK: - Public API
@@ -51,7 +63,6 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
         // Include tapDisabledByTimeout and tapDisabledByUserInput so we can
         // re-enable the tap if macOS auto-disables it.
         let mask: CGEventMask = (1 << CGEventType.keyDown.rawValue)
-            | (1 << CGEventType.flagsChanged.rawValue)
             | (1 << CGEventType.tapDisabledByTimeout.rawValue)
             | (1 << CGEventType.tapDisabledByUserInput.rawValue)
 
@@ -108,7 +119,6 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var shortcut: KeyboardShortcut?
-    private var currentFlags: NSEvent.ModifierFlags = []
 
     private static let tapCallback: CGEventTapCallBack = { proxy, type, event, refcon in
         guard let refcon else { return Unmanaged.passUnretained(event) }
@@ -131,7 +141,7 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
             if type == .keyDown,
                let shortcut = strongSelf.shortcut,
                event.getIntegerValueField(.keyboardEventKeycode) == Int64(shortcut.keyCode),
-               strongSelf.eventModifiersMatch(shortcut.modifiers) {
+               strongSelf.eventModifiersMatch(shortcut.modifiers, eventFlags: event.flags) {
                 // Drop the event entirely so the focused app receives no
                 // key press at all. Returning nil from a CGEventTap
                 // callback swallows the event; remapping the key code
@@ -151,40 +161,26 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
                 return Unmanaged.passUnretained(event)
             }
 
-            // Update tracked modifier state for flagsChanged.
-            if type == .flagsChanged {
-                let flags = event.flags
-                var newFlags: NSEvent.ModifierFlags = []
-                if flags.contains(.maskCommand)   { newFlags.insert(.command) }
-                if flags.contains(.maskAlternate) { newFlags.insert(.option) }
-                if flags.contains(.maskControl)   { newFlags.insert(.control) }
-                if flags.contains(.maskShift)     { newFlags.insert(.shift) }
-                strongSelf.currentFlags = newFlags
-            }
-
             return Unmanaged.passUnretained(event)
         }
 
         return result
     }
 
-    /// Compare tracked NSEvent.ModifierFlags with Carbon modifier constants.
+    /// Compare the modifiers carried by the key event itself with Carbon
+    /// modifier constants. Reading them from the event (instead of tracking
+    /// flagsChanged) means a missed event while the tap was disabled can
+    /// never leave stale state behind. Caps Lock, fn and numeric-pad bits
+    /// are ignored.
     /// Exposed as internal for unit testing.
-    internal func eventModifiersMatch(_ carbonModifiers: UInt32) -> Bool {
-        let expectedFlags: NSEvent.ModifierFlags = {
-            var f: NSEvent.ModifierFlags = []
-            if (carbonModifiers & UInt32(cmdKey)) != 0    { f.insert(.command) }
-            if (carbonModifiers & UInt32(optionKey)) != 0 { f.insert(.option) }
-            if (carbonModifiers & UInt32(controlKey)) != 0 { f.insert(.control) }
-            if (carbonModifiers & UInt32(shiftKey)) != 0  { f.insert(.shift) }
-            return f
-        }()
-        return currentFlags == expectedFlags
-    }
-
-    /// Exposed as internal for unit testing.
-    internal var currentFlagsForTesting: NSEvent.ModifierFlags {
-        get { currentFlags }
-        set { currentFlags = newValue }
+    internal func eventModifiersMatch(_ carbonModifiers: UInt32,
+                                      eventFlags: CGEventFlags) -> Bool {
+        var expected: CGEventFlags = []
+        if (carbonModifiers & UInt32(cmdKey)) != 0     { expected.insert(.maskCommand) }
+        if (carbonModifiers & UInt32(optionKey)) != 0  { expected.insert(.maskAlternate) }
+        if (carbonModifiers & UInt32(controlKey)) != 0 { expected.insert(.maskControl) }
+        if (carbonModifiers & UInt32(shiftKey)) != 0   { expected.insert(.maskShift) }
+        let relevant: CGEventFlags = [.maskCommand, .maskAlternate, .maskControl, .maskShift]
+        return eventFlags.intersection(relevant) == expected
     }
 }

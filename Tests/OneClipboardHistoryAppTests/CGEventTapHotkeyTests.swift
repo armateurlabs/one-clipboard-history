@@ -14,6 +14,15 @@ import Testing
 @MainActor
 struct CGEventTapHotkeyTests {
 
+    @Test func modifiersAreMatchedFromTheEventItselfIgnoringLockBits() {
+        let backend = CGEventTapHotkey()
+        let option = UInt32(optionKey)
+        #expect(backend.eventModifiersMatch(option, eventFlags: [.maskAlternate]))
+        #expect(backend.eventModifiersMatch(option, eventFlags: [.maskAlternate, .maskAlphaShift, .maskSecondaryFn]))
+        #expect(!backend.eventModifiersMatch(option, eventFlags: []))
+        #expect(!backend.eventModifiersMatch(option, eventFlags: [.maskAlternate, .maskShift]))
+    }
+
     @Test func conformsToProtocol() {
         let backend: HotkeyRegistrationAPI = CGEventTapHotkey()
         _ = backend

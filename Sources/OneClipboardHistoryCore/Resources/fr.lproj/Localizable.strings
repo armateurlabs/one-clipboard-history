@@ -164,6 +164,8 @@
 "Could not change launch at login: %@" = "Impossible de modifier le lancement à l’ouverture de session : %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Ouvrez One Clipboard History pour autoriser l'accès au presse-papiers et démarrer la capture.";
 "Global shortcut disabled while password field has focus." = "Raccourci global désactivé lorsqu'un champ de mot de passe est actif.";
+"Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut." = "Raccourci global bloqué : la saisie sécurisée est probablement tenue par %@. Quittez-le pour rétablir le raccourci.";
+"Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it." = "Raccourci global bloqué : un processus système tient la saisie sécurisée. Verrouiller puis déverrouiller l'écran peut la libérer.";
 "Hotkey backend" = "Backend du raccourci";
 "CGEventTap" = "CGEventTap";
 "Carbon" = "Carbon";

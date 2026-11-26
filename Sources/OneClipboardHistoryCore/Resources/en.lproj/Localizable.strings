@@ -164,6 +164,8 @@
 "Could not change launch at login: %@" = "Could not change launch at login: %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Open One Clipboard History to allow clipboard access and start capturing.";
 "Global shortcut disabled while password field has focus." = "Global shortcut disabled while password field has focus.";
+"Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut." = "Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut.";
+"Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it." = "Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it.";
 "Hotkey backend" = "Hotkey backend";
 "CGEventTap" = "CGEventTap";
 "Carbon" = "Carbon";
