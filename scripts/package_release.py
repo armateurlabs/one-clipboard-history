@@ -174,6 +174,8 @@ def _validate_direct_app(app: Path, root: Path, metadata: dict) -> str:
              "Only the direct-distribution app may be packaged")
     _require(info.get("CFBundleShortVersionString") == metadata["version"]
              and info.get("CFBundleVersion") == metadata["build"], "App version does not match release metadata")
+    _require(bool(info.get("SUPublicEDKey")),
+             "Releases must carry the Sparkle SUPublicEDKey, otherwise they cannot update themselves")
     _command([str(root / "scripts/validate-app.sh"), str(app)])
     executable = app / "Contents/MacOS/OneClipboardHistory"
     _require_arm64(_command(["lipo", "-archs", str(executable)], capture=True))

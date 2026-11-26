@@ -30,6 +30,14 @@ ditto "$OCH_RESOURCES" "$OCH_APP/Contents/Resources/$(basename "$OCH_RESOURCES")
 for OCH_LOCALIZATION in Resources/*.lproj; do
     ditto "$OCH_LOCALIZATION" "$OCH_APP/Contents/Resources/$(basename "$OCH_LOCALIZATION")"
 done
+# Sparkle 2 self-updater (direct distribution only; the Store variant has its own build).
+OCH_SPARKLE="$(find "$OCH_ROOT/.build/artifacts" -type d -name Sparkle.framework -path '*macos*' -print -quit)"
+[[ -n "$OCH_SPARKLE" ]] || { printf 'Sparkle.framework is missing from the SwiftPM artifacts.\n' >&2; exit 1; }
+mkdir -p "$OCH_APP/Contents/Frameworks"
+ditto "$OCH_SPARKLE" "$OCH_APP/Contents/Frameworks/Sparkle.framework"
+# The app is not sandboxed, so Sparkle's XPC services are unnecessary.
+rm -rf "$OCH_APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices" \
+       "$OCH_APP/Contents/Frameworks/Sparkle.framework/XPCServices"
 cp LICENSE "$OCH_APP/Contents/Resources/LICENSE.txt"
 cp PRIVACY.md "$OCH_APP/Contents/Resources/PRIVACY.txt"
 cp AppStore/PrivacyInfo.xcprivacy "$OCH_APP/Contents/Resources/PrivacyInfo.xcprivacy"
@@ -45,9 +53,15 @@ cp "$OCH_STAGE/AppIcon.iconset/icon_512x512@2x.png" "$OCH_ROOT/build/AppIcon.png
 
 # Keep the production identifier stable so existing settings and permissions survive.
 OCH_IDENTITY="${OCH_SIGN_IDENTITY:-${MCM_SIGN_IDENTITY:--}}"
+# Sign Sparkle inside-out (nested code first), then the app.
+OCH_SPARKLE_B="$OCH_APP/Contents/Frameworks/Sparkle.framework/Versions/B"
 if [[ "$OCH_IDENTITY" == "-" ]]; then
+    codesign --force --sign - "$OCH_SPARKLE_B/Autoupdate" "$OCH_SPARKLE_B/Updater.app"
+    codesign --force --sign - "$OCH_APP/Contents/Frameworks/Sparkle.framework"
     codesign --force --sign - --identifier "$OCH_BUNDLE_ID" "$OCH_APP"
 else
+    codesign --force --options runtime --timestamp --sign "$OCH_IDENTITY" "$OCH_SPARKLE_B/Autoupdate" "$OCH_SPARKLE_B/Updater.app"
+    codesign --force --options runtime --timestamp --sign "$OCH_IDENTITY" "$OCH_APP/Contents/Frameworks/Sparkle.framework"
     codesign --force --options runtime --timestamp --sign "$OCH_IDENTITY" "$OCH_APP"
 fi
 "$OCH_ROOT/scripts/validate-app.sh" "$OCH_APP"

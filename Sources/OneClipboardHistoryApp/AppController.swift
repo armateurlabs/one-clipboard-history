@@ -37,6 +37,7 @@ final class AppController {
     private var statusItem: NSStatusItem?
     private var isRecordingShortcut = false
     private var secureInputTimer: Timer?
+    private let updater = SoftwareUpdater()
     private var pasteTarget: NSRunningApplication?
     private var lastExternalApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
@@ -638,6 +639,9 @@ final class AppController {
         applicationMenu.addItem(withTitle: L10n.text("About One Clipboard History"), action: #selector(menuAbout), keyEquivalent: "").target = self
         applicationMenu.addItem(withTitle: L10n.text("MIT License"), action: #selector(menuLicense), keyEquivalent: "").target = self
         applicationMenu.addItem(withTitle: L10n.text("Privacy Policy"), action: #selector(menuPrivacy), keyEquivalent: "").target = self
+        if updater.isAvailable {
+            applicationMenu.addItem(withTitle: L10n.text("Check for Updates…"), action: #selector(menuCheckForUpdates), keyEquivalent: "").target = self
+        }
         applicationMenu.addItem(.separator())
         applicationMenu.addItem(withTitle: L10n.text("Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         applicationMenu.addItem(.separator())
@@ -667,6 +671,9 @@ final class AppController {
         menu.addItem(withTitle: L10n.text("About One Clipboard History"), action: #selector(menuAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: L10n.text("MIT License"), action: #selector(menuLicense), keyEquivalent: "").target = self
         menu.addItem(withTitle: L10n.text("Privacy Policy"), action: #selector(menuPrivacy), keyEquivalent: "").target = self
+        if updater.isAvailable {
+            menu.addItem(withTitle: L10n.text("Check for Updates…"), action: #selector(menuCheckForUpdates), keyEquivalent: "").target = self
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: L10n.text("Quit One Clipboard History"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         item.menu = menu
@@ -678,6 +685,7 @@ final class AppController {
     @objc private func menuAbout() { panel.hide(); information.showAbout() }
     @objc private func menuLicense() { panel.hide(); information.show(.license) }
     @objc private func menuPrivacy() { panel.hide(); information.show(.privacy) }
+    @objc private func menuCheckForUpdates() { panel.hide(); updater.checkForUpdates() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
     private func seedDemo() async {
