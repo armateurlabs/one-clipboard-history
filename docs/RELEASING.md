@@ -75,6 +75,32 @@ Download the app ZIP, compare its SHA-256 with `SHA256SUMS.txt`, quit the previo
 version, and move the extracted app into Applications. GitHub also provides
 source archives automatically. The Store prototype is not a consumer installer.
 
+## Automatic updates (Sparkle 2)
+
+The direct app embeds Sparkle and reads its appcast from
+`https://raw.githubusercontent.com/armateurlabs/one-clipboard-history/main/appcast.xml`
+(`SUFeedURL` in `Resources/Info.plist`). The Store variant does not embed it.
+
+One-time setup: generate the EdDSA key pair with
+`.build/artifacts/sparkle/Sparkle/bin/generate_keys` (the private key stays in
+your login Keychain; back it up with `generate_keys -x`) and put the printed
+public key in `SUPublicEDKey` in `Resources/Info.plist`. Without it the updater
+stays disabled, and `package_release.py` refuses to package the release.
+Losing the private key means installed copies can never update again.
+
+For each published release, after the GitHub release exists:
+
+```sh
+mkdir -p build/appcast && cp <release ZIP> build/appcast/
+.build/artifacts/sparkle/Sparkle/bin/generate_appcast build/appcast \
+    --download-url-prefix https://github.com/armateurlabs/one-clipboard-history/releases/download/vX.Y.Z/
+```
+
+Review the generated `appcast.xml`, copy it to the repository root and push it to
+`main`. Test the first update from the previous version before announcing it.
+Updates change the binary, so the ad hoc signing caveat applies: with ad hoc
+signing, macOS may ask again for Accessibility permission after each update.
+
 ## Retry and failure behavior
 
 - A failed check or packaging step never starts publication.

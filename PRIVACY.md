@@ -10,6 +10,18 @@ are used to capture, display, and restore your copies. They are not transmitted
 to Armateur Labs or third parties. The app includes no advertising, analytics,
 tracking, account, or network synchronization.
 
+### Update checks (direct download only)
+
+The direct-download app can look for new versions with
+[Sparkle](https://sparkle-project.org). It asks you once whether to check
+automatically; **Check for Updates…** in the menu always works on demand. A
+check downloads a small appcast file from GitHub
+(`raw.githubusercontent.com/armateurlabs/one-clipboard-history`) and identifies the
+app and its version in the request’s User-Agent; no system profile,
+identifier or clipboard data is sent. GitHub’s privacy policy applies to that
+request. Updates are accepted only when signed with the project’s EdDSA key.
+The Mac App Store variant contains no updater and makes no network request.
+
 ### Permissions and control
 
 Clipboard access enables capture. Event-posting permission enables pasting into

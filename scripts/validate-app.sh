@@ -66,6 +66,15 @@ require(privacy.get('NSPrivacyTracking') is False, 'tracking must be disabled')
 require(privacy.get('NSPrivacyTrackingDomains') == [], 'unexpected tracking domains')
 require(privacy.get('NSPrivacyCollectedDataTypes') == [], 'unexpected data collection declaration')
 require(privacy.get('NSPrivacyAccessedAPITypes') == [{'NSPrivacyAccessedAPIType': 'NSPrivacyAccessedAPICategoryUserDefaults', 'NSPrivacyAccessedAPITypeReasons': ['CA92.1']}], 'unexpected UserDefaults privacy declaration')
+sparkle = app / 'Contents/Frameworks/Sparkle.framework'
+if store:
+    require(not sparkle.exists(), 'Store build must not embed Sparkle')
+    require(not any(key.startswith('SU') for key in info), 'Store build must not carry Sparkle settings')
+else:
+    require(sparkle.is_dir(), 'Sparkle.framework is not embedded')
+    require(str(info.get('SUFeedURL', '')).startswith('https://'), 'SUFeedURL must be an https URL')
+    if not info.get('SUPublicEDKey'):
+        print('warning: SUPublicEDKey is missing; the updater stays disabled in this build', file=sys.stderr)
 if store:
     require(info.get('OCHMacAppStoreBuild') is True, 'Store build marker is missing')
     require(not info.get('OCHPreviewMode'), 'Store build must not be preview mode')

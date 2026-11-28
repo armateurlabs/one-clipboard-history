@@ -117,6 +117,7 @@
 "Settings" = "Настройки";
 "Settings (⌘,)" = "Настройки (⌘,)";
 "Settings…" = "Настройки…";
+"Check for Updates…" = "Проверить обновления…";
 "Shortcut and window" = "Сочетание клавиш и окно";
 "Shortcut unavailable. The previous shortcut remains active." = "Сочетание недоступно. Прежнее сочетание остаётся активным.";
 "Shortcut unavailable. Choose a different shortcut." = "Сочетание недоступно. Выберите другое сочетание.";
@@ -164,6 +165,8 @@
 "Could not change launch at login: %@" = "Не удалось изменить запуск при входе: %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Откройте One Clipboard History, чтобы разрешить доступ к буферу обмена и начать сохранение копий.";
 "Global shortcut disabled while password field has focus." = "Глобальная комбинация отключена, пока активен поле ввода пароля.";
+"Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut." = "Глобальная комбинация заблокирована: защищённый ввод, вероятно, удерживает %@. Закройте приложение, чтобы восстановить комбинацию.";
+"Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it." = "Глобальная комбинация заблокирована: защищённый ввод удерживает системный процесс. Блокировка и разблокировка экрана могут его освободить.";
 "Hotkey backend" = "Бэкенд горячей клавиши";
 "CGEventTap" = "CGEventTap";
 "Carbon" = "Carbon";

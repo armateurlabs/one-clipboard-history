@@ -27,6 +27,7 @@ final class AppController {
     private var cacheIncludesPreviews = true
     private var statusMessage: String?
     private var statusError: (any Error)?
+    private var statusArgument: String?
     private var appliedLanguage: AppLanguage = .system
     private var operation: Task<Void, Never>?
     private var pasteOperation: Task<Void, Never>?
@@ -35,6 +36,8 @@ final class AppController {
     private var settingsWindow: NSWindowController?
     private var statusItem: NSStatusItem?
     private var isRecordingShortcut = false
+    private var secureInputTimer: Timer?
+    private let updater = SoftwareUpdater()
     private var pasteTarget: NSRunningApplication?
     private var lastExternalApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
@@ -94,8 +97,12 @@ final class AppController {
             toggle()
         }
         hotkey.onSecureInputDetected = { [weak self] in
-            guard let self else { return }
-            setStatus("Global shortcut disabled while password field has focus.")
+            self?.refreshSecureInputStatus()
+        }
+        // The event tap is blind while secure input is on, so the shortcut
+        // can never report it; poll instead.
+        secureInputTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.refreshSecureInputStatus() }
         }
         settings.hotkeyBackendType = hotkey.backendType
         configureHotkey()
@@ -155,6 +162,8 @@ final class AppController {
 
     func shutdown() async {
         shuttingDown = true
+        secureInputTimer?.invalidate()
+        secureInputTimer = nil
         hotkey.stop()
         await pasteboard.stopAndWait()
         await pasteOperation?.value
@@ -286,16 +295,18 @@ final class AppController {
 
     private func render() {
         let status = statusMessage.map { key in
-            statusError.map { L10n.format(key, $0.localizedDescription) } ?? L10n.text(key)
+            if let statusArgument { return L10n.format(key, statusArgument) }
+            return statusError.map { L10n.format(key, $0.localizedDescription) } ?? L10n.text(key)
         }
         panel.update(rows: rows, showPreviews: settings.showPreviews, showSizes: settings.showSizes,
                      status: status, fontSize: settings.historyFontSize, animationsEnabled: settings.animationsEnabled,
                      density: settings.historyDensity)
     }
 
-    private func setStatus(_ message: String?, error: (any Error)? = nil) {
+    private func setStatus(_ message: String?, error: (any Error)? = nil, argument: String? = nil) {
         statusMessage = message
         statusError = error
+        statusArgument = argument
         render()
     }
 
@@ -490,13 +501,41 @@ final class AppController {
         }
     }
 
+    private static let secureInputByAppStatus =
+        "Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut."
+    private static let secureInputBySystemStatus =
+        "Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it."
+
+    private var statusIsSecureInput: Bool {
+        statusMessage == Self.secureInputByAppStatus || statusMessage == Self.secureInputBySystemStatus
+    }
+
+    private func refreshSecureInputStatus() {
+        guard !demo, !shuttingDown else { return }
+        guard let holder = CGEventTapHotkey.secureInputHolder() else {
+            if statusIsSecureInput { setStatus(nil) }
+            return
+        }
+        // Never overwrite an unrelated status (paste errors, capture warnings...).
+        guard statusMessage == nil || statusIsSecureInput else { return }
+        let message: String
+        let argument: String?
+        switch holder {
+        case .app(let name): (message, argument) = (Self.secureInputByAppStatus, name)
+        case .system: (message, argument) = (Self.secureInputBySystemStatus, nil)
+        }
+        if statusMessage != message || statusArgument != argument {
+            setStatus(message, argument: argument)
+        }
+    }
+
     private func configureHotkey(force: Bool = false) {
         // The screenshot preview must never compete with the installed app.
         guard !demo, !shuttingDown, !isRecordingShortcut else { return }
         if hotkey.register(settings.shortcut, force: force) {
             settings.shortcutError = nil
             if statusMessage == "Shortcut unavailable: choose another one in Settings." ||
-               statusMessage == "Global shortcut disabled while password field has focus." {
+               (statusIsSecureInput && !CGEventTapHotkey.isSecureInputActive()) {
                 setStatus(nil)
             }
         } else {
@@ -605,6 +644,9 @@ final class AppController {
         applicationMenu.addItem(withTitle: L10n.text("About One Clipboard History"), action: #selector(menuAbout), keyEquivalent: "").target = self
         applicationMenu.addItem(withTitle: L10n.text("MIT License"), action: #selector(menuLicense), keyEquivalent: "").target = self
         applicationMenu.addItem(withTitle: L10n.text("Privacy Policy"), action: #selector(menuPrivacy), keyEquivalent: "").target = self
+        if updater.isAvailable {
+            applicationMenu.addItem(withTitle: L10n.text("Check for Updates…"), action: #selector(menuCheckForUpdates), keyEquivalent: "").target = self
+        }
         applicationMenu.addItem(.separator())
         applicationMenu.addItem(withTitle: L10n.text("Settings…"), action: #selector(menuSettings), keyEquivalent: ",").target = self
         applicationMenu.addItem(.separator())
@@ -634,6 +676,9 @@ final class AppController {
         menu.addItem(withTitle: L10n.text("About One Clipboard History"), action: #selector(menuAbout), keyEquivalent: "").target = self
         menu.addItem(withTitle: L10n.text("MIT License"), action: #selector(menuLicense), keyEquivalent: "").target = self
         menu.addItem(withTitle: L10n.text("Privacy Policy"), action: #selector(menuPrivacy), keyEquivalent: "").target = self
+        if updater.isAvailable {
+            menu.addItem(withTitle: L10n.text("Check for Updates…"), action: #selector(menuCheckForUpdates), keyEquivalent: "").target = self
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: L10n.text("Quit One Clipboard History"), action: #selector(menuQuit), keyEquivalent: "q").target = self
         item.menu = menu
@@ -645,6 +690,7 @@ final class AppController {
     @objc private func menuAbout() { panel.hide(); information.showAbout() }
     @objc private func menuLicense() { panel.hide(); information.show(.license) }
     @objc private func menuPrivacy() { panel.hide(); information.show(.privacy) }
+    @objc private func menuCheckForUpdates() { panel.hide(); updater.checkForUpdates() }
     @objc private func menuQuit() { NSApp.terminate(nil) }
 
     private func seedDemo() async {

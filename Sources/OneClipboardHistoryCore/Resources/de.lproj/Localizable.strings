@@ -117,6 +117,7 @@
 "Settings" = "Einstellungen";
 "Settings (⌘,)" = "Einstellungen (⌘,)";
 "Settings…" = "Einstellungen…";
+"Check for Updates…" = "Nach Updates suchen…";
 "Shortcut and window" = "Tastenkürzel und Fenster";
 "Shortcut unavailable. The previous shortcut remains active." = "Tastenkürzel nicht verfügbar. Das vorherige Tastenkürzel bleibt aktiv.";
 "Shortcut unavailable. Choose a different shortcut." = "Tastenkürzel nicht verfügbar. Wähle ein anderes Tastenkürzel.";
@@ -164,6 +165,8 @@
 "Could not change launch at login: %@" = "Der Start bei der Anmeldung konnte nicht geändert werden: %@";
 "Open One Clipboard History to allow clipboard access and start capturing." = "Öffne One Clipboard History, um den Zugriff auf die Zwischenablage zu erlauben und die Erfassung zu starten.";
 "Global shortcut disabled while password field has focus." = "Globale Tastenkombination deaktiviert, wenn ein Passwortfeld aktiv ist.";
+"Global shortcut blocked: secure input is probably held by %@. Quit it to restore the shortcut." = "Globale Tastenkombination blockiert: Die sichere Eingabe wird wahrscheinlich von %@ gehalten. Beenden Sie die App, um die Kombination wiederherzustellen.";
+"Global shortcut blocked: a system process is holding secure input. Locking and unlocking the screen may release it." = "Globale Tastenkombination blockiert: Ein Systemprozess hält die sichere Eingabe. Den Bildschirm zu sperren und wieder zu entsperren kann sie freigeben.";
 "Hotkey backend" = "Hotkey-Backend";
 "CGEventTap" = "CGEventTap";
 "Carbon" = "Carbon";
