@@ -15,6 +15,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import package_release
 
 
+class SparkleKeyTests(unittest.TestCase):
+    def test_accepts_a_base64_32_byte_key(self):
+        package_release._require_sparkle_key({"SUPublicEDKey": "uNPWmCObGbmm1+5wtpWfZPvd7XTWVfZsyalBAbdlaro="})
+
+    def test_rejects_missing_truncated_or_malformed_keys(self):
+        for value in (None, "", "uNPWmCObGbmm1+5wtpWf", "not base64!", 42):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                package_release._require_sparkle_key({"SUPublicEDKey": value})
+
+
 class PackageVerificationTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

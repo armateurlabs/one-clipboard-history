@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path, PurePosixPath
@@ -165,6 +166,17 @@ def _command(arguments: list[str], *, cwd: Path | None = None, capture: bool = F
     return result.stdout + result.stderr if capture else ""
 
 
+def _require_sparkle_key(info: dict) -> None:
+    """The Sparkle public key is a base64-encoded 32-byte Ed25519 key."""
+    key = info.get("SUPublicEDKey")
+    try:
+        valid = isinstance(key, str) and len(base64.b64decode(key, validate=True)) == 32
+    except ValueError:
+        valid = False
+    _require(valid, "Releases must carry a valid Sparkle SUPublicEDKey (base64, 32 bytes), "
+                    "otherwise they cannot update themselves")
+
+
 def _validate_direct_app(app: Path, root: Path, metadata: dict) -> str:
     _require(app.name == APP_NAME and app.is_dir(), "Package the canonical One Clipboard History.app bundle")
     with (app / "Contents/Info.plist").open("rb") as stream:
@@ -174,8 +186,7 @@ def _validate_direct_app(app: Path, root: Path, metadata: dict) -> str:
              "Only the direct-distribution app may be packaged")
     _require(info.get("CFBundleShortVersionString") == metadata["version"]
              and info.get("CFBundleVersion") == metadata["build"], "App version does not match release metadata")
-    _require(bool(info.get("SUPublicEDKey")),
-             "Releases must carry the Sparkle SUPublicEDKey, otherwise they cannot update themselves")
+    _require_sparkle_key(info)
     _command([str(root / "scripts/validate-app.sh"), str(app)])
     executable = app / "Contents/MacOS/OneClipboardHistory"
     _require_arm64(_command(["lipo", "-archs", str(executable)], capture=True))

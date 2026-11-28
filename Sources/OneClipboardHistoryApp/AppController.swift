@@ -518,9 +518,14 @@ final class AppController {
         }
         // Never overwrite an unrelated status (paste errors, capture warnings...).
         guard statusMessage == nil || statusIsSecureInput else { return }
-        let message = holder.name == nil ? Self.secureInputBySystemStatus : Self.secureInputByAppStatus
-        if statusMessage != message || statusArgument != holder.name {
-            setStatus(message, argument: holder.name)
+        let message: String
+        let argument: String?
+        switch holder {
+        case .app(let name): (message, argument) = (Self.secureInputByAppStatus, name)
+        case .system: (message, argument) = (Self.secureInputBySystemStatus, nil)
+        }
+        if statusMessage != message || statusArgument != argument {
+            setStatus(message, argument: argument)
         }
     }
 
@@ -530,7 +535,7 @@ final class AppController {
         if hotkey.register(settings.shortcut, force: force) {
             settings.shortcutError = nil
             if statusMessage == "Shortcut unavailable: choose another one in Settings." ||
-               statusIsSecureInput {
+               (statusIsSecureInput && !CGEventTapHotkey.isSecureInputActive()) {
                 setStatus(nil)
             }
         } else {

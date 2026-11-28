@@ -21,20 +21,32 @@ final class CGEventTapHotkey: HotkeyRegistrationAPI {
         IsSecureEventInputEnabled()
     }
 
-    /// The process macOS reports as holding secure input, when any.
-    ///
-    /// `name` is nil for `loginwindow` (a catch-all: some startup agent or
-    /// daemon is asking for a password) and for processes without a
-    /// user-visible name. The attribution can be wrong: if a background
-    /// process enables secure input the system may blame the foreground app.
-    static func secureInputHolder() -> (pid: pid_t, name: String?)? {
-        guard IsSecureEventInputEnabled(),
-              let dict = CGSessionCopyCurrentDictionary() as? [String: Any],
-              let number = dict["kCGSSessionSecureInputPID"] as? NSNumber else { return nil }
+    /// Who holds secure input, as far as macOS lets us tell.
+    enum SecureInputHolder: Equatable {
+        /// A named process, probably the culprit (the system may blame the
+        /// foreground app when a background process enabled secure input).
+        case app(name: String)
+        /// `loginwindow` (a catch-all: some startup agent or daemon is asking
+        /// for a password) or a holder macOS does not identify.
+        case system
+    }
+
+    /// The holder of secure input, or nil when secure input is off.
+    /// Secure input being on with an unreadable holder is still reported
+    /// (as `.system`) because the shortcut stays blocked either way.
+    static func secureInputHolder() -> SecureInputHolder? {
+        guard IsSecureEventInputEnabled() else { return nil }
+        guard let dict = CGSessionCopyCurrentDictionary() as? [String: Any],
+              let number = dict["kCGSSessionSecureInputPID"] as? NSNumber else { return .system }
         let pid = pid_t(truncating: number)
         let app = NSRunningApplication(processIdentifier: pid)
-        let name = app?.bundleIdentifier == "com.apple.loginwindow" ? nil : app?.localizedName
-        return (pid, name)
+        if app?.bundleIdentifier == "com.apple.loginwindow" { return .system }
+        if let name = app?.localizedName, !name.isEmpty { return .app(name: name) }
+        var buffer = [CChar](repeating: 0, count: 256)
+        if proc_name(pid, &buffer, UInt32(buffer.count)) > 0 {
+            return .app(name: String(cString: buffer))
+        }
+        return .app(name: "PID \(pid)")
     }
 
     // MARK: - Public API
